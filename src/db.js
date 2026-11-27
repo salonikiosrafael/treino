@@ -34,6 +34,8 @@ db.version(2).stores({
 //   startedAt, finishedAt, durationSec, exerciseIds: [...] (índice multiEntry p/ histórico por exercício),
 //   exercises: [{ uid, exerciseId, planned: { sets, repMin, repMax, increment }, note, sets: [{ kg, reps, rir, drops? }] }]
 //   (drops = [{ kg, reps }] opcional, adicionado em 2026-11 sem mudar índices — sessões antigas não têm)
+//   (exercício pode ter assisted: true = feito no gravitron, kg é AUXÍLIO; e superset: id do biset — ambos opcionais)
+// item de treino também pode ter assisted: true (padrão ao iniciar a sessão) — opcional, sem índice.
 // }
 // exerciseNote = { exerciseId, text, updatedAt }  — nota "fixa" que aparece nas próximas sessões
 db.version(3).stores({

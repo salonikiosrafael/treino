@@ -15,15 +15,17 @@ const METRICS = [
 ];
 
 /** Gráficos de evolução de um exercício. Carregado sob demanda (Chart.js só baixa quando usado). */
-export default function ProgressCharts({ history }) {
-  const best = key => Math.max(...history.map(h => h[key]));
+export const ASSISTED_METRICS = [{ key: 'maxKg', title: 'Auxílio usado (menor = melhor)', unit: 'kg', lowerIsBetter: true }];
+
+export default function ProgressCharts({ history, metrics = METRICS }) {
+  const best = (key, low) => (low ? Math.min : Math.max)(...history.map(h => h[key]));
   return (
     <>
-      {METRICS.map(m => (
+      {metrics.map(m => (
         <section className="card chart-card" key={m.key}>
           <div className="chart-head">
             <h2>{m.title}</h2>
-            <span className="muted small">recorde {fmtKg(Math.round(best(m.key) * 10) / 10)} {m.unit}</span>
+            <span className="muted small">{m.lowerIsBetter ? 'melhor' : 'recorde'} {fmtKg(Math.round(best(m.key, m.lowerIsBetter) * 10) / 10)} {m.unit}</span>
           </div>
           <LineChart history={history} metric={m} />
         </section>

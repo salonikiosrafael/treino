@@ -90,6 +90,9 @@ export default function WorkoutEditor() {
                   <NumField label="Incremento" decimal suffix="kg" value={it.increment} min={0} max={50} onCommit={v => setItem(it.uid, { increment: v })} />
                 )}
               </div>
+              {e?.equipment === 'body only' && (
+                <AssistToggle on={!!it.assisted} onChange={on => setItem(it.uid, { assisted: on })} />
+              )}
               <div className="item-actions">
                 <button disabled={i === 0} onClick={() => updateItems(id, items => normalizeSupersets(moveInArray(items, i, -1)))} aria-label="Mover para cima">↑</button>
                 <button disabled={i === w.items.length - 1} onClick={() => updateItems(id, items => normalizeSupersets(moveInArray(items, i, 1)))} aria-label="Mover para baixo">↓</button>
@@ -114,5 +117,15 @@ export default function WorkoutEditor() {
         if (confirm(`Excluir o treino “${w.name || 'Sem nome'}”?`)) { await deleteWorkout(id); nav('/', { replace: true }); }
       }}>Excluir treino</button>
     </>
+  );
+}
+
+/** Chave "Com auxílio (gravitron)" para exercícios de peso corporal. */
+export function AssistToggle({ on, onChange, compact = false }) {
+  return (
+    <button type="button" role="switch" aria-checked={on} className={on ? 'assist-toggle on' : 'assist-toggle'} onClick={() => onChange(!on)}>
+      <span className="sw" aria-hidden="true"><i /></span>
+      <span>Com auxílio (gravitron){!compact && <small>{on ? 'kg = ajuda: menos kg é mais difícil' : 'desligado: kg = carga extra, se houver'}</small>}</span>
+    </button>
   );
 }

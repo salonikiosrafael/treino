@@ -22,8 +22,13 @@ export default function SessionSummary() {
     const records = [];
     for (const exId of ids) {
       const cur = summarizeExercise(s, exId);
-      const hist = await exerciseHistory(exId, { before: s.startedAt, excludeId: s.id });
+      const hist = (await exerciseHistory(exId, { before: s.startedAt, excludeId: s.id })).filter(h => !!h.assisted === !!cur?.assisted);
       if (!cur || !hist.length) continue;
+      if (cur.assisted) {
+        const least = Math.min(...hist.map(h => h.maxKg));
+        if (cur.maxKg < least) records.push({ exId, text: `Menos auxílio: ${fmtKg(cur.maxKg)} kg (antes ${fmtKg(least)})` });
+        continue;
+      }
       const bestKg = Math.max(...hist.map(h => h.maxKg));
       const bestE = Math.max(...hist.map(h => h.e1rm));
       if (cur.maxKg > bestKg) records.push({ exId, text: `Carga: ${fmtKg(cur.maxKg)} kg (antes ${fmtKg(bestKg)})` });

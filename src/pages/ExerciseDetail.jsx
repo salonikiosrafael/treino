@@ -8,6 +8,7 @@ import { fmtSets, relativeDay, fmtKg } from '../format.js';
 import { useWorkoutPicker } from '../picker.js';
 
 const ProgressCharts = lazy(() => import('../components/ProgressCharts.jsx'));
+const ASSISTED_METRICS = [{ key: 'maxKg', title: 'Auxílio usado (menor = melhor)', unit: 'kg', lowerIsBetter: true }];
 
 export default function ExerciseDetail() {
   // /exercicio/:id (biblioteca) ou /treino/:id/adicionar/ex/:exId (escolhendo para um treino)
@@ -121,20 +122,41 @@ function AnimatedImages({ images, name }) {
 function Progress({ history }) {
   if (!history) return null;
   if (!history.length) return <p className="muted small center progress-empty">Os gráficos de evolução aparecem depois da primeira sessão com este exercício.</p>;
+  // sessões no gravitron (kg = ajuda) ficam separadas das normais: as escalas são opostas
+  const normal = history.filter(h => !h.assisted);
+  const assisted = history.filter(h => h.assisted);
+  return (
+    <>
+      <h2 className="section-title">Progresso <span className="muted small">· {history.length} {history.length === 1 ? 'sessão' : 'sessões'}</span></h2>
+      {normal.length > 0 && <ProgressBlock history={normal} />}
+      {assisted.length > 0 && (
+        <>
+          {normal.length > 0 && <h3 className="opt-title">Com auxílio (gravitron)</h3>}
+          <ProgressBlock history={assisted} assisted />
+        </>
+      )}
+    </>
+  );
+}
+
+function ProgressBlock({ history, assisted = false }) {
   const last = history.at(-1);
   const best = k => Math.max(...history.map(h => h[k]));
   return (
     <>
-      <h2 className="section-title">Progresso <span className="muted small">· {history.length} {history.length === 1 ? 'sessão' : 'sessões'}</span></h2>
       <div className="tiles">
-        <div className="tile"><div className="tile-n">{fmtKg(best('maxKg'))}<small> kg</small></div><div className="tile-l">Recorde de carga</div></div>
-        <div className="tile"><div className="tile-n">{fmtKg(Math.round(best('e1rm')))}<small> kg</small></div><div className="tile-l">1RM estimado</div></div>
-        <div className="tile"><div className="tile-n">{history.length}</div><div className="tile-l">{history.length === 1 ? 'sessão' : 'sessões'}</div></div>
+        {assisted
+          ? <div className="tile"><div className="tile-n">{fmtKg(Math.min(...history.map(h => h.maxKg)))}<small> kg</small></div><div className="tile-l">Menor auxílio</div></div>
+          : <>
+              <div className="tile"><div className="tile-n">{fmtKg(best('maxKg'))}<small> kg</small></div><div className="tile-l">Recorde de carga</div></div>
+              <div className="tile"><div className="tile-n">{fmtKg(Math.round(best('e1rm')))}<small> kg</small></div><div className="tile-l">1RM estimado</div></div>
+            </>}
+        <div className="tile"><div className="tile-n">{history.length}</div><div className="tile-l">{history.length === 1 ? 'sessão' : 'sessões'}{assisted ? ' c/ auxílio' : ''}</div></div>
       </div>
-      <p className="muted small progress-last">Última vez ({relativeDay(last.date)}): {fmtSets(last.sets)}</p>
+      <p className="muted small progress-last">Última vez{assisted ? ' com auxílio' : ''} ({relativeDay(last.date)}): {fmtSets(last.sets)}</p>
       {history.length < 2
         ? <p className="muted small progress-empty">Com 2 sessões ou mais, os gráficos aparecem aqui.</p>
-        : <Suspense fallback={<p className="muted small">Carregando gráficos…</p>}><ProgressCharts history={history} /></Suspense>}
+        : <Suspense fallback={<p className="muted small">Carregando gráficos…</p>}><ProgressCharts history={history} metrics={assisted ? ASSISTED_METRICS : undefined} /></Suspense>}
     </>
   );
 }

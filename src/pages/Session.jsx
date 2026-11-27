@@ -5,7 +5,7 @@ import { db } from '../db.js';
 import { useAllExercises, equipmentLabel, variationSort } from '../exercises.js';
 import {
   updateSession, addSet, removeSet, setField, swapExercise, saveNote, finishSession, deleteSession,
-  isFilled, sessionVolume, addDrop, removeDrop, setDropField, cleanSet,
+  isFilled, sessionVolume, addDrop, removeDrop, setDropField, cleanSet, setAssisted,
 } from '../sessions.js';
 import { exerciseHistory, suggest } from '../progression.js';
 import { fmtClock, fmtSets, relativeDay, fmtKg, toLocalInput } from '../format.js';
@@ -13,6 +13,7 @@ import { parseNum, fmtNum, supersetInfo, supersetName } from '../workouts.js';
 import { useNow } from '../hooks.js';
 import { Thumb } from '../components/ExerciseBrowser.jsx';
 import NumField from '../components/NumField.jsx';
+import { AssistToggle } from './WorkoutEditor.jsx';
 
 /** Sessão em andamento (status 'active') ou edição de uma sessão do histórico (status 'done'). */
 export default function Session() {
@@ -128,8 +129,12 @@ function HistoryMeta({ s }) {
 function ExerciseBlock({ s, ex, index, exMap, all, ss }) {
   const e = exMap.get(ex.exerciseId);
   const history = useLiveQuery(() => exerciseHistory(ex.exerciseId, { before: s.startedAt, excludeId: s.id }), [ex.exerciseId, s.startedAt, s.id]);
-  const last = history === undefined ? undefined : history.at(-1) ?? null;
-  const tip = s.status === 'active' && history ? suggest(history, ex.planned, { bodyweight: e?.equipment === 'body only' }) : null;
+
+  const assisted = !!ex.assisted;
+  // compara só com sessões feitas do mesmo jeito (com auxílio × sem auxílio)
+  const same = history && history.filter(h => !!h.assisted === assisted);
+  const last = history === undefined ? undefined : same.at(-1) ?? null;
+  const tip = s.status === 'active' && same ? suggest(same, ex.planned, { bodyweight: e?.equipment === 'body only', assisted }) : null;
   const [swapOpen, setSwapOpen] = useState(false);
   const p = ex.planned;
 
@@ -147,16 +152,21 @@ function ExerciseBlock({ s, ex, index, exMap, all, ss }) {
             ? <Link to={`/exercicio/${encodeURIComponent(e.id)}`} className="ex-name plain sx-name">{e.name}</Link>
             : <span className="ex-name">Exercício removido</span>}
           {p && <span className="meta-chip">{p.sets} × {p.repMin === p.repMax ? p.repMin : `${p.repMin}–${p.repMax}`} reps</span>}
+
         </div>
         <button className="btn small ghost swap-btn" onClick={() => setSwapOpen(o => !o)}>{swapOpen ? 'Fechar' : 'Trocar'}</button>
       </div>
+
+      {e?.equipment === 'body only' && (
+        <AssistToggle on={assisted} onChange={on => setAssisted(s.id, ex.uid, on)} />
+      )}
 
       {swapOpen && <SwapList s={s} ex={ex} current={e} all={all} onDone={() => setSwapOpen(false)} />}
 
       <div className="ref">
         {last === undefined ? '…' : last
-          ? <><span className="ref-label">Última vez · {relativeDay(last.date)}</span><span className="ref-sets">{fmtSets(last.sets) || '—'}</span></>
-          : <span className="muted">Primeira vez neste exercício.</span>}
+          ? <><span className="ref-label">Última vez{assisted ? ' com auxílio' : ''} · {relativeDay(last.date)}</span><span className="ref-sets">{fmtSets(last.sets) || '—'}</span></>
+          : <span className="muted">{assisted ? 'Primeira vez com auxílio neste exercício.' : 'Primeira vez neste exercício.'}</span>}
       </div>
       {tip && <div className={`tip tip-${tip.kind}`}>{tip.text}</div>}
 
@@ -164,7 +174,7 @@ function ExerciseBlock({ s, ex, index, exMap, all, ss }) {
 
       <div className="sets">
         <div className="set-row set-head">
-          <span>Série</span><span>kg</span><span>Reps</span><span>RIR</span><span />
+          <span>Série</span><span>{assisted ? 'Auxílio' : 'kg'}</span><span>Reps</span><span>RIR</span><span />
         </div>
         {ex.sets.map((st, i) => (
           <SetRow key={i} s={s} ex={ex} st={st} i={i} prev={last?.sets?.[i]} />

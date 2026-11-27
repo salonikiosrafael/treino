@@ -21,6 +21,7 @@ export async function startSession(workoutId) {
       uid: newId('e'),
       exerciseId: it.exerciseId,
       ...(it.superset ? { superset: it.superset } : {}),
+      ...(it.assisted ? { assisted: true } : {}),
       planned: { sets: it.sets, repMin: it.repMin, repMax: it.repMax, increment: it.increment },
       note: notes[i]?.text ?? '',
       sets: Array.from({ length: it.sets }, emptySet), // campos começam VAZIOS
@@ -62,12 +63,16 @@ export const removeDrop = (sid, uid, i, j) => updateExercise(sid, uid, e => mapS
 export const setDropField = (sid, uid, i, j, field, value) =>
   updateExercise(sid, uid, e => mapSet(e, i, st => ({ ...st, drops: (st.drops ?? []).map((d, n) => (n === j ? { ...d, [field]: value } : d)) })));
 const dropFilled = d => d.kg != null || d.reps != null;
+/** Liga/desliga "com auxílio" (gravitron) para um exercício desta sessão. */
+export const setAssisted = (sid, uid, on) => updateExercise(sid, uid, ({ assisted: _old, ...e }) => (on ? { ...e, assisted: true } : e)); // eslint-disable-line no-unused-vars
+
 export const cleanSet = st => (st.drops ? { ...st, drops: st.drops.filter(dropFilled) } : st);
 
 /** Troca o exercício só nesta sessão. Com clearSets, as séries voltam a ficar vazias (mesma quantidade). */
 export async function swapExercise(sid, uid, newExerciseId, { clearSets = false } = {}) {
   const note = await db.exerciseNotes.get(newExerciseId);
-  return updateExercise(sid, uid, e => ({
+  // ao trocar de variação, o "com auxílio" volta a desligado (a chave só existe em exercícios de peso corporal)
+  return updateExercise(sid, uid, ({ assisted: _old, ...e }) => ({ // eslint-disable-line no-unused-vars
     ...e, exerciseId: newExerciseId, note: note?.text ?? '',
     sets: clearSets ? e.sets.map(emptySet) : e.sets,
   }));
@@ -121,4 +126,5 @@ export async function lastDoneByWorkout() {
 /** Volume de uma série, incluindo os drops. */
 export const setVolume = st =>
   (st.kg ?? 0) * (st.reps ?? 0) + (st.drops ?? []).reduce((a, d) => a + (d.kg ?? 0) * (d.reps ?? 0), 0);
-export const sessionVolume = s => s.exercises.reduce((v, e) => v + e.sets.reduce((a, st) => a + setVolume(st), 0), 0);
+// Exercícios com auxílio (gravitron) não entram no volume: ali os kg são ajuda, não carga.
+export const sessionVolume = s => s.exercises.reduce((v, e) => (e.assisted ? v : v + e.sets.reduce((a, st) => a + setVolume(st), 0)), 0);

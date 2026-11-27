@@ -18,15 +18,21 @@ import { fmtKg } from './format.js';
 
 const round = (n, step = 0.25) => Math.round(n / step) * step;
 
-/** Resumo de um exercício em uma sessão finalizada (várias ocorrências na mesma sessão são somadas). */
+/**
+ * Resumo de um exercício em uma sessão finalizada (várias ocorrências na mesma sessão são somadas).
+ * Com auxílio (gravitron), "carga" = o MENOR auxílio usado (a série mais difícil); volume e 1RM não se aplicam.
+ */
 export function summarizeExercise(session, exerciseId) {
-  const sets = session.exercises.filter(e => e.exerciseId === exerciseId).flatMap(e => e.sets).filter(isFilled);
+  const entries = session.exercises.filter(e => e.exerciseId === exerciseId);
+  const sets = entries.flatMap(e => e.sets).filter(isFilled);
   if (!sets.length) return null;
-  const maxKg = Math.max(...sets.map(st => st.kg ?? 0));
+  const assisted = entries.some(e => e.assisted);
+  const kgs = sets.map(st => st.kg ?? 0);
+  const maxKg = assisted ? Math.min(...kgs) : Math.max(...kgs);
   const repsAtMax = sets.filter(st => (st.kg ?? 0) === maxKg).reduce((a, st) => a + (st.reps ?? 0), 0);
-  const volume = sets.reduce((a, st) => a + setVolume(st), 0);
-  const e1rm = Math.max(...sets.map(st => epley(st.kg ?? 0, st.reps ?? 0)));
-  return { date: session.startedAt, sessionId: session.id, sets, maxKg, repsAtMax, volume, e1rm };
+  const volume = assisted ? 0 : sets.reduce((a, st) => a + setVolume(st), 0);
+  const e1rm = assisted ? 0 : Math.max(...sets.map(st => epley(st.kg ?? 0, st.reps ?? 0)));
+  return { date: session.startedAt, sessionId: session.id, sets, maxKg, repsAtMax, volume, e1rm, assisted };
 }
 
 /** 1RM estimado (Epley). Com 1 repetição, é a própria carga. */
@@ -46,19 +52,22 @@ export async function exerciseHistory(exerciseId, { before = Infinity, excludeId
 }
 
 const belowMin = (h, repMin) => h.sets.some(st => (st.reps ?? 0) < repMin);
-const progressed = (prev, cur) => cur.maxKg > prev.maxKg || (cur.maxKg === prev.maxKg && cur.repsAtMax > prev.repsAtMax);
+const progressed = (prev, cur, assisted = false) =>
+  (assisted ? cur.maxKg < prev.maxKg : cur.maxKg > prev.maxKg) || (cur.maxKg === prev.maxKg && cur.repsAtMax > prev.repsAtMax);
 
 /**
  * @param history  resumos do mais antigo ao mais recente (exerciseHistory)
  * @param planned  { repMin, repMax, increment } da sessão atual
  * @returns { kind: 'up'|'reduce'|'hold'|'stalled'|'reps', text } ou null sem histórico
  */
-export function suggest(history, planned, { bodyweight = false } = {}) {
+export function suggest(history, planned, { bodyweight = false, assisted = false } = {}) {
   const last = history.at(-1);
   if (!last || !planned) return null;
   const { repMin, repMax } = planned;
   const inc = planned.increment > 0 ? planned.increment : 2.5;
   const kg = last.maxKg;
+
+  if (assisted) return suggestAssisted(history, repMin, repMax, inc);
 
   // Peso corporal sem carga extra: a progressão é por repetições, não por kg.
   if (bodyweight && !kg) return suggestBodyweight(history, repMin, repMax);
@@ -102,4 +111,32 @@ function suggestBodyweight(history, repMin, repMax) {
     }
   }
   return { kind: 'reps', text: 'Tente fazer mais repetições que da última vez' };
+}
+
+/**
+ * Gravitron / com auxílio: a lógica é a mesma, mas ao contrário — progredir é TIRAR auxílio.
+ * kg = auxílio (menor usado na sessão).
+ */
+function suggestAssisted(history, repMin, repMax, inc) {
+  const last = history.at(-1);
+  const prev = history.at(-2);
+  const kg = last.maxKg;
+  const allTop = last.sets.every(st => (st.reps ?? 0) >= repMax);
+  const rirFail = last.sets.some(st => st.rir === 0 && (st.reps ?? 0) < repMax);
+  if (allTop && !rirFail) {
+    if (kg <= 0) return { kind: 'up', text: 'Já sem auxílio! Passe para a barra fixa/paralelas normal' };
+    const to = Math.max(0, round(kg - inc));
+    return { kind: 'up', text: to === 0 ? 'Tire o auxílio: tente sem contrapeso' : `Diminua o auxílio para ${fmtKg(to)} kg` };
+  }
+  if (belowMin(last, repMin) && prev && belowMin(prev, repMin)) {
+    return { kind: 'reduce', text: `Considere aumentar o auxílio para ${fmtKg(round(kg + inc))} kg` };
+  }
+  if (belowMin(last, repMin)) return { kind: 'hold', text: `Mantenha ${fmtKg(kg)} kg de auxílio` };
+  if (history.length >= 4) {
+    const tail = history.slice(-4);
+    if ([1, 2, 3].every(i => !progressed(tail[i - 1], tail[i], true))) {
+      return { kind: 'stalled', text: 'Estagnado: considere trocar a variação ou a faixa de repetições' };
+    }
+  }
+  return { kind: 'reps', text: `Mantenha ${fmtKg(kg)} kg de auxílio e tente mais repetições` };
 }

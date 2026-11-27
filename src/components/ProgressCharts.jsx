@@ -32,7 +32,7 @@ export default function ProgressCharts({ history }) {
   );
 }
 
-function LineChart({ history, metric }) {
+export function LineChart({ history, metric }) {
   const ref = useRef();
   useEffect(() => {
     const accent = css('--accent'), muted = css('--muted'), border = css('--border');

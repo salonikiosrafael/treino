@@ -4,7 +4,9 @@ import { db } from '../db.js';
 import { useExerciseMap, REGIONS } from '../exercises.js';
 import { isFilled, getActiveSession, startSession } from '../sessions.js';
 import { activitiesBetween, startOfWeek, startOfDay, addDays, dayKey, DAY } from '../activity.js';
-import { fmtDuration, relativeDay } from '../format.js';
+import { fmtDuration, relativeDay, fmtKg, fmtDate } from '../format.js';
+import { allBody } from '../body.js';
+import { bodyTrend } from './Body.jsx';
 import Calendar from '../components/Calendar.jsx';
 import { nextInPlan } from '../workouts.js';
 
@@ -38,11 +40,12 @@ export default function Progress() {
       db.workouts.orderBy('order').toArray(),
       db.cardio.orderBy('date').last(),
     ]);
-    return { thisWeek, lastWeek, sessions, workouts, lastCardio };
+    const body = await allBody();
+    return { thisWeek, lastWeek, sessions, workouts, lastCardio, body };
   }, [week]);
 
   if (!data || !exMap) return <ProgressHeader />;
-  const { thisWeek, lastWeek, sessions, workouts, lastCardio } = data;
+  const { thisWeek, lastWeek, sessions, workouts, lastCardio, body } = data;
   const lastActivity = Math.max(sessions[0]?.startedAt ?? 0, lastCardio?.date ?? 0) || null;
 
   return (
@@ -53,6 +56,8 @@ export default function Progress() {
         <LastCard lastActivity={lastActivity} last={sessions[0]} lastCardio={lastCardio} />
         <NextCard sessions={sessions} workouts={workouts} />
       </div>
+      <WeeklySetsCard acts={thisWeek} workouts={workouts} exMap={exMap} />
+      <BodyCard list={body} />
       <MusclesCard sessions={sessions} workouts={workouts} exMap={exMap} />
     </>
   );
@@ -209,6 +214,76 @@ function MusclesCard({ sessions, workouts, exMap }) {
         </>
       )}
     </>
+  );
+}
+
+/**
+ * Séries (preenchidas, sem contar drops) por região muscular na semana atual.
+ * Cada série conta para cada região dos músculos principais do exercício.
+ * Faixa de referência comum para hipertrofia: ~10–20 séries por músculo por semana.
+ */
+const SET_MIN = 10, SET_MAX = 20, SCALE = 24;
+function WeeklySetsCard({ acts, workouts, exMap }) {
+  const count = new Map();
+  for (const a of acts) {
+    if (a.kind !== 'strength') continue;
+    for (const e of a.item.exercises) {
+      const n = e.sets.filter(isFilled).length;
+      if (!n) continue;
+      const regions = new Set((exMap.get(e.exerciseId)?.primary ?? []).map(regionOfMuscle).filter(Boolean));
+      for (const r of regions) count.set(r, (count.get(r) ?? 0) + n);
+    }
+  }
+  const planRegions = new Set();
+  for (const w of workouts.filter(x => !x.archived)) for (const it of w.items)
+    for (const m of exMap.get(it.exerciseId)?.primary ?? []) { const r = regionOfMuscle(m); if (r) planRegions.add(r); }
+  const rows = REGIONS.filter(r => count.has(r.key) || planRegions.has(r.key))
+    .map(r => ({ ...r, n: count.get(r.key) ?? 0 }))
+    .sort((a, b) => b.n - a.n);
+
+  return (
+    <section className="card">
+      <div className="card-head"><h2>Séries por músculo</h2><span className="muted small">nesta semana</span></div>
+      {!rows.length ? <p className="muted small">Aparece depois do primeiro treino da semana.</p> : (
+        <>
+          <div className="sets-bars">
+            {rows.map(r => {
+              const level = r.n === 0 ? 'zero' : r.n < SET_MIN ? 'low' : r.n <= SET_MAX ? 'ok' : 'high';
+              return (
+                <div key={r.key} className="sb-row">
+                  <span className="sb-name">{r.label}</span>
+                  <span className="sb-track">
+                    <i className="sb-zone" style={{ left: `${(SET_MIN / SCALE) * 100}%`, width: `${((SET_MAX - SET_MIN) / SCALE) * 100}%` }} />
+                    <i className={`sb-bar ${level}`} style={{ width: `${Math.min(100, (r.n / SCALE) * 100)}%` }} />
+                  </span>
+                  <span className="sb-n">{r.n}</span>
+                </div>
+              );
+            })}
+          </div>
+          <p className="muted small sb-legend">A faixa clara marca 10–20 séries por semana, referência comum para ganho de massa. Abaixo disso, a barra fica amarela.</p>
+        </>
+      )}
+    </section>
+  );
+}
+
+/** Peso atual, variação e atalhos para registrar / ver gráfico. */
+function BodyCard({ list }) {
+  const t = bodyTrend(list, 'weight');
+  return (
+    <section className="card body-card">
+      <div className="card-head"><h2>Corpo</h2>{list.length > 0 && <Link to="/corpo" className="small">Ver evolução ›</Link>}</div>
+      {t ? (
+        <div className="body-now">
+          <div><div className="big-num">{fmtKg(t.last.weight)} <small className="muted">kg</small></div>
+            <div className="muted small">{relativeDay(t.last.date)}</div></div>
+          {t.diff != null && <div className={t.diff > 0 ? 'body-diff up' : t.diff < 0 ? 'body-diff down' : 'body-diff'}>
+            {t.diff > 0 ? '▲ +' : t.diff < 0 ? '▼ −' : '= '}{fmtKg(Math.abs(Math.round(t.diff * 10) / 10))} kg<br /><span className="muted small">desde {fmtDate(t.first.date)}</span></div>}
+        </div>
+      ) : <p className="muted small">{list.length ? 'Você registrou medidas, mas ainda não o peso.' : 'Acompanhe seu peso e medidas com gráfico.'}</p>}
+      <Link to="/corpo/novo" className="btn small block body-add">+ Registrar peso / medidas</Link>
+    </section>
   );
 }
 

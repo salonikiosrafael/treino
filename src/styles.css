@@ -500,3 +500,27 @@ button.ex-row { width: 100%; background: none; border: 0; font: inherit; text-al
 .records li { display: flex; flex-direction: column; }
 .records li span { color: var(--muted); font-size: 14px; }
 .center { text-align: center; }
+
+/* ---------- Fase G: séries por músculo, corpo ---------- */
+.sets-bars { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.sb-row { display: grid; grid-template-columns: 8.5em 1fr 2em; align-items: center; gap: 10px; }
+.sb-name { font-size: 14px; }
+.sb-track { position: relative; height: 12px; border-radius: 6px; background: var(--surface-2); overflow: hidden; }
+.sb-zone { position: absolute; top: 0; bottom: 0; background: color-mix(in srgb, var(--accent) 18%, transparent); }
+.sb-bar { position: absolute; left: 0; top: 2px; bottom: 2px; border-radius: 4px; background: var(--accent); }
+.sb-bar.low { background: #eab308; }
+.sb-bar.high { background: #f97316; }
+.sb-bar.zero { width: 0 !important; }
+.sb-n { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.sb-legend { margin: 12px 0 0 !important; }
+.body-now { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 6px 0 12px; }
+.body-diff { font-weight: 700; text-align: right; }
+.body-diff.down { color: var(--cardio); }
+.body-diff.up { color: #f97316; }
+.chart-card .body-diff { text-align: left; margin: 0 0 8px; }
+.body-add { text-align: center; text-decoration: none; }
+.body-chips { margin-bottom: 4px; }
+.body-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 8px; }
+.body-row .chev { margin-left: auto; color: var(--muted); font-size: 22px; }
+.text { color: var(--text); }
+.body-save { background: var(--accent) !important; color: var(--accent-text) !important; }

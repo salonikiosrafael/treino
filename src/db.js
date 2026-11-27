@@ -55,6 +55,12 @@ db.version(4).stores({
 db.version(5).stores({}).upgrade(tx =>
   tx.table('workouts').toCollection().modify(w => { if (w.archived === undefined) w.archived = false; }));
 
+// v6 — peso corporal e medidas. Só adiciona tabela nova.
+// body = { id, date (ms), weight (kg), bodyFat (%), waist, chest, arm, thigh, hip, calf (cm) — todos opcionais, createdAt, updatedAt }
+db.version(6).stores({
+  body: 'id, date',
+});
+
 export async function getSetting(key, fallback = null) {
   const row = await db.settings.get(key);
   return row ? row.value : fallback;

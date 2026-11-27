@@ -32,12 +32,12 @@ function BackupCard() {
       const incoming = summarize(data.tables);
       const current = summarize({
         workouts: await db.workouts.toArray(), sessions: await db.sessions.toArray(),
-        customExercises: await db.customExercises.toArray(), cardio: await db.cardio.toArray(),
+        customExercises: await db.customExercises.toArray(), cardio: await db.cardio.toArray(), body: await db.body.toArray(),
       });
       const ok = confirm(
         `Restaurar backup de ${fmtDate(data.exportedAt)}?\n\n` +
-        `Arquivo: ${incoming.workouts} treinos, ${incoming.sessions} sessões, ${incoming.cardio} cardios, ${incoming.custom} exercícios personalizados.\n` +
-        `Atual (será SUBSTITUÍDO): ${current.workouts} treinos, ${current.sessions} sessões, ${current.cardio} cardios, ${current.custom} exercícios personalizados.\n\n` +
+        `Arquivo: ${incoming.workouts} treinos, ${incoming.sessions} sessões, ${incoming.cardio} cardios, ${incoming.body} medições, ${incoming.custom} exercícios personalizados.\n` +
+        `Atual (será SUBSTITUÍDO): ${current.workouts} treinos, ${current.sessions} sessões, ${current.cardio} cardios, ${current.body} medições, ${current.custom} exercícios personalizados.\n\n` +
         'Os dados atuais deste aparelho serão apagados e trocados pelos do arquivo.');
       if (!ok) return;
       setBusy(true);

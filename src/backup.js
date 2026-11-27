@@ -75,6 +75,7 @@ export const summarize = tables => ({
   sessions: (tables.sessions ?? []).filter(s => s.status === 'done').length,
   custom: tables.customExercises?.length ?? 0,
   cardio: tables.cardio?.length ?? 0,
+  body: tables.body?.length ?? 0,
 });
 
 /** Substitui todos os dados pelos do backup, numa única transação (tudo ou nada). */

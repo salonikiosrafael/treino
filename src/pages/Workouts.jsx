@@ -180,9 +180,9 @@ function WeekStrip() {
   const today = dayKey(Date.now());
   return (
     <section className="card week-card">
-      <Link to="/historico?ver=calendario" className="week-top plain">
+      <Link to="/progresso" className="week-top plain">
         <span><strong>Esta semana</strong> · {total} {total === 1 ? 'treino' : 'treinos'}</span>
-        <span className="muted small">Calendário ›</span>
+        <span className="muted small">Progresso ›</span>
       </Link>
       <div className="week-days">
         {WEEKDAYS.map((w, i) => {

@@ -7,6 +7,7 @@ import { cardioTitle, cardioDetails } from '../cardio.js';
 import { activitiesBetween } from '../activity.js';
 import { fmtWeekday, fmtTime, fmtDuration, fmtKg, relativeDay } from '../format.js';
 import { Thumb } from '../components/ExerciseBrowser.jsx';
+import CardioIcon from '../components/CardioIcon.jsx';
 
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 const VIEWS = [['', 'Lista'], ['exercicios', 'Por exercício']];
@@ -81,9 +82,10 @@ function CardioRow({ c }) {
   return (
     <Link className="ex-row h-row" to={`/cardio/${c.id}`}>
       <i className="kind-bar c" aria-hidden="true" />
+      <span className="cardio-badge"><CardioIcon type={c.type} size={22} /></span>
       <div className="ex-meta">
         <div className="h-top">
-          <span className="ex-name">Cardio · {cardioTitle(c)}</span>
+          <span className="ex-name">{cardioTitle(c)}</span>
           <span className="muted small">{fmtWeekday(c.date)} · {fmtTime(c.date)}</span>
         </div>
         <div className="ex-sub">{cardioDetails(c)}</div>

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { db } from '../db.js';
-import { CARDIO_TYPES, INTENSITY_LABELS, blankCardio, saveCardio, deleteCardio } from '../cardio.js';
+import { CARDIO_TYPES, INTENSITY_LABELS, blankCardio, saveCardio, deleteCardio, cardioTypeLabel, cardioDetails } from '../cardio.js';
+import CardioIcon from '../components/CardioIcon.jsx';
 import { toLocalInput } from '../format.js';
 import NumField from '../components/NumField.jsx';
 
@@ -42,37 +43,55 @@ export default function CardioForm() {
     nav(-1);
   }
 
+  const derived = paceInfo(form);
+  const summary = cardioDetails(form);
+
   return (
     <>
       <Header nav={nav} title={isNew ? 'Registrar cardio' : 'Editar cardio'} />
 
+      <section className="cardio-hero">
+        <div className="cardio-hero-icon"><CardioIcon type={form.type} size={34} /></div>
+        <div>
+          <div className="cardio-hero-title">{form.type === 'outro' ? (form.label.trim() || 'Outra atividade') : cardioTypeLabel(form.type)}</div>
+          <div className="cardio-hero-sub">{summary || 'Escolha a atividade e a duração'}</div>
+        </div>
+      </section>
+
+      <div className="type-tiles" role="radiogroup" aria-label="Tipo de cardio">
+        {CARDIO_TYPES.map(t => (
+          <button key={t.key} role="radio" aria-checked={form.type === t.key}
+            className={form.type === t.key ? 'type-tile on' : 'type-tile'} onClick={() => set({ type: t.key })}>
+            <CardioIcon type={t.key} size={28} />
+            <span>{t.label}</span>
+          </button>
+        ))}
+      </div>
+      {form.type === 'outro' && (
+        <input className="field other-input" placeholder="Qual atividade? (ex: elíptico, corrida na rua)" value={form.label}
+          onChange={e => set({ label: e.target.value })} />
+      )}
+
       <section className="card">
-        <h2>Tipo</h2>
-        <div className="segmented" role="radiogroup">
-          {CARDIO_TYPES.map(t => (
-            <button key={t.key} role="radio" aria-checked={form.type === t.key}
-              className={form.type === t.key ? 'on' : ''} onClick={() => set({ type: t.key })}>{t.label}</button>
+        <div className="card-head"><h2>Duração</h2><span className="muted small">obrigatório</span></div>
+        <NumField className="big-field" suffix="min" value={form.durationMin} min={1} max={600} allowEmpty placeholder="0"
+          onCommit={v => set({ durationMin: v })} />
+        <div className="quick-chips">
+          {[10, 15, 20, 30, 45, 60].map(m => (
+            <button key={m} className={form.durationMin === m ? 'chip on' : 'chip'} onClick={() => set({ durationMin: m })}>{m} min</button>
           ))}
         </div>
-        {form.type === 'outro' && (
-          <input className="field" style={{ marginTop: 10 }} placeholder="Qual atividade? (ex: elíptico)" value={form.label}
-            onChange={e => set({ label: e.target.value })} />
-        )}
+        <label className="when-row">
+          <span className="muted">Quando</span>
+          <input type="datetime-local" value={toLocalInput(form.date)} onChange={e => {
+            const ts = new Date(e.target.value).getTime();
+            if (Number.isFinite(ts)) set({ date: ts });
+          }} />
+        </label>
       </section>
 
       <section className="card">
-        <div className="meta-grid">
-          <label className="num">
-            <span className="num-label">Data e hora</span>
-            <input type="datetime-local" value={toLocalInput(form.date)} onChange={e => {
-              const ts = new Date(e.target.value).getTime();
-              if (Number.isFinite(ts)) set({ date: ts });
-            }} />
-          </label>
-          <NumField label="Duração *" suffix="min" value={form.durationMin} min={1} max={600} allowEmpty placeholder="obrigatório"
-            onCommit={v => set({ durationMin: v })} />
-        </div>
-        <h3 className="opt-title">Opcional</h3>
+        <div className="card-head"><h2>Detalhes</h2><span className="muted small">opcional</span></div>
         <div className="cardio-grid">
           {swim
             ? <NumField label="Distância" suffix="m" value={form.distanceKm != null ? Math.round(form.distanceKm * 1000) : null} max={20000} allowEmpty
@@ -82,23 +101,47 @@ export default function CardioForm() {
           <NumField label="Velocidade" suffix="km/h" decimal value={form.speed} max={80} allowEmpty onCommit={v => set({ speed: v })} />
           {!swim && <NumField label="Inclinação" suffix="%" decimal value={form.incline} max={40} allowEmpty onCommit={v => set({ incline: v })} />}
         </div>
+        {derived && <p className="derived">{derived}</p>}
+      </section>
 
-        <div className="num-label" style={{ marginTop: 14 }}>
-          Intensidade percebida {form.intensity != null && <span className="muted">— {form.intensity}/10, {INTENSITY_LABELS[form.intensity]}</span>}
+      <section className="card">
+        <div className="card-head">
+          <h2>Intensidade</h2>
+          <span className="muted small">como você sentiu</span>
+        </div>
+        <div className="rpe-big" style={form.intensity ? { color: rpeColor(form.intensity) } : undefined}>
+          {form.intensity != null ? <><strong>{form.intensity}</strong>/10 · {INTENSITY_LABELS[form.intensity]}</> : <span className="muted">Toque para escolher</span>}
         </div>
         <div className="rpe" role="radiogroup" aria-label="Intensidade percebida">
           {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
-            <button key={n} role="radio" aria-checked={form.intensity === n} className={form.intensity === n ? 'on' : ''}
+            <button key={n} role="radio" aria-checked={form.intensity === n}
+              className={form.intensity === n ? 'on' : form.intensity != null && n < form.intensity ? 'fill' : ''}
+              style={{ '--rpe': rpeColor(n) }}
               onClick={() => set({ intensity: form.intensity === n ? null : n })}>{n}</button>
           ))}
         </div>
+        <div className="rpe-scale muted small"><span>leve</span><span>moderada</span><span>máxima</span></div>
       </section>
 
-      {error && <p className="error small">{error}</p>}
-      <button className="btn primary block" onClick={save}>Salvar</button>
-      {!isNew && <button className="btn danger block" style={{ marginTop: 16 }} onClick={remove}>Excluir registro</button>}
+      {!isNew && <button className="btn danger block" style={{ marginTop: 8 }} onClick={remove}>Excluir registro</button>}
+
+      <div className="add-bar">
+        {error && <span className="error small save-error">{error}</span>}
+        <button className="btn primary block cardio-save" onClick={save}>Salvar</button>
+      </div>
     </>
   );
+}
+
+const rpeColor = n => `hsl(${140 - ((n - 1) * 140) / 9} 70% 48%)`;
+
+/** Ritmo/velocidade média calculados a partir de distância e duração. */
+function paceInfo(c) {
+  if (!c.durationMin || !c.distanceKm) return null;
+  const fmt = n => String(Math.round(n * 10) / 10).replace('.', ',');
+  const mmss = min => `${Math.floor(min)}:${String(Math.round((min % 1) * 60)).padStart(2, '0')}`;
+  if (c.type === 'natacao') return `Ritmo: ${mmss(c.durationMin / (c.distanceKm * 10))} min/100 m`;
+  return `Velocidade média: ${fmt(c.distanceKm / (c.durationMin / 60))} km/h · ritmo ${mmss(c.durationMin / c.distanceKm)} min/km`;
 }
 
 function Header({ nav, title }) {

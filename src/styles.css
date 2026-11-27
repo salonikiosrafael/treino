@@ -379,3 +379,37 @@ button.ex-row { width: 100%; background: none; border: 0; font: inherit; text-al
 .rest-meter.old i, .rest-meter.never i { background: var(--danger); }
 .rest-meter.never i { opacity: .35; }
 .rest-legend { margin: 10px 0 0 !important; }
+
+/* ---------- Cardio (visual novo) ---------- */
+.cardio-hero { display: flex; align-items: center; gap: 14px; padding: 18px 16px; margin: 4px 0 14px; border-radius: var(--radius);
+  color: #fff; background: linear-gradient(135deg, #1d4ed8, #0ea5e9); }
+.cardio-hero-icon { width: 56px; height: 56px; flex: none; border-radius: 16px; display: grid; place-items: center; background: rgb(255 255 255 / .18); }
+.cardio-hero-title { font-size: 22px; font-weight: 800; letter-spacing: -0.01em; }
+.cardio-hero-sub { font-size: 14px; opacity: .9; margin-top: 2px; }
+.type-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.type-tile { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 4px; border-radius: var(--radius);
+  border: 1.5px solid var(--border); background: var(--surface); color: var(--text); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.type-tile .cardio-icon { color: var(--muted); }
+.type-tile.on { border-color: var(--cardio); background: color-mix(in srgb, var(--cardio) 14%, var(--surface)); }
+.type-tile.on .cardio-icon { color: var(--cardio); }
+.other-input { margin-top: 10px; }
+.big-field { margin: 10px 0 4px; }
+.big-field input { font-size: 34px; font-weight: 800; padding: 10px 56px; }
+.big-field .num-suffix { font-size: 17px; right: 18px; }
+.quick-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.quick-chips .chip.on { background: var(--cardio); border-color: var(--cardio); color: #fff; }
+.when-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+.when-row input { width: auto; padding: 8px 10px; font-size: 16px; min-height: 40px; }
+.card .card-head { margin-bottom: 8px; }
+.derived { margin: 12px 0 0 !important; padding: 8px 10px; border-radius: 10px; font-size: 14px;
+  background: color-mix(in srgb, var(--cardio) 12%, transparent); color: var(--cardio); font-weight: 600; }
+.rpe-big { font-size: 18px; margin: 2px 0 10px; font-weight: 600; }
+.rpe-big strong { font-size: 30px; font-weight: 800; }
+.rpe button { border-color: transparent; background: color-mix(in srgb, var(--rpe) 14%, var(--surface-2)); }
+.rpe button.fill { background: color-mix(in srgb, var(--rpe) 45%, var(--surface-2)); }
+.rpe button.on { background: var(--rpe); border-color: var(--rpe); color: #fff; }
+.rpe-scale { display: flex; justify-content: space-between; margin-top: 6px; }
+.add-bar .save-error { flex: none; max-width: 45%; }
+.cardio-save { flex: 1; width: auto; background: var(--cardio) !important; color: #fff !important; }
+.cardio-badge { width: 40px; height: 40px; flex: none; border-radius: 12px; display: grid; place-items: center;
+  color: var(--cardio); background: color-mix(in srgb, var(--cardio) 14%, transparent); }

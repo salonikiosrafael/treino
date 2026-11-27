@@ -1,16 +1,22 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAllExercises, equipmentLabel, muscleLabel, imageUrl, variationSort } from '../exercises.js';
 import { Thumb } from '../components/ExerciseBrowser.jsx';
 import { exerciseHistory } from '../progression.js';
 import { fmtSets, relativeDay } from '../format.js';
+import { useWorkoutPicker } from '../picker.js';
 
 const ProgressCharts = lazy(() => import('../components/ProgressCharts.jsx'));
 
 export default function ExerciseDetail() {
-  const { id } = useParams();
+  // /exercicio/:id (biblioteca) ou /treino/:id/adicionar/ex/:exId (escolhendo para um treino)
+  const { id: rawId, exId } = useParams();
+  const id = exId ?? rawId;
+  const workoutId = exId ? rawId : null;
+  const pick = useWorkoutPicker(workoutId);
   const nav = useNavigate();
+  const loc = useLocation();
   const all = useAllExercises();
   const e = all?.find(x => x.id === id);
   const history = useLiveQuery(() => exerciseHistory(id), [id]);
@@ -52,7 +58,8 @@ export default function ExerciseDetail() {
           <ul className="ex-list">
             {variations.map(v => (
               <li key={v.id}>
-                <Link className="ex-row" to={`/exercicio/${encodeURIComponent(v.id)}`} replace>
+                <Link className="ex-row" replace state={loc.state}
+                  to={workoutId ? `/treino/${workoutId}/adicionar/ex/${encodeURIComponent(v.id)}` : `/exercicio/${encodeURIComponent(v.id)}`}>
                   <Thumb e={v} />
                   <div className="ex-meta">
                     <div className="ex-name">{v.name}</div>
@@ -64,7 +71,21 @@ export default function ExerciseDetail() {
           </ul>
         </section>
       )}
+
+      {workoutId && pick.workout && <AddBar e={e} count={pick.picked.get(e.id) ?? 0} onPick={pick.onPick} nav={nav} />}
     </>
+  );
+}
+
+/** Barra fixa no rodapé ao escolher exercícios para um treino. */
+function AddBar({ e, count, onPick, nav }) {
+  return (
+    <div className="add-bar">
+      {count
+        ? <><span className="add-bar-in">✓ Já está no treino</span>
+            <button className="btn danger" onClick={() => onPick(e)}>Remover</button></>
+        : <button className="btn primary block" onClick={async () => { await onPick(e); nav(-1); }}>+ Adicionar ao treino</button>}
+    </div>
   );
 }
 

@@ -29,8 +29,13 @@ export default function App() {
           <Route path="/" element={<Workouts />} />
           <Route path="/treino/:id" element={<WorkoutEditor />} />
           <Route path="/treino/:id/adicionar" element={<WorkoutPicker />} />
+          <Route path="/treino/:id/adicionar/m/:region" element={<WorkoutPicker />} />
+          <Route path="/treino/:id/adicionar/m/:region/:group" element={<WorkoutPicker />} />
+          <Route path="/treino/:id/adicionar/ex/:exId" element={<ExerciseDetail />} />
           <Route path="/exercicio/:id" element={<ExerciseDetail />} />
           <Route path="/biblioteca" element={<Library />} />
+          <Route path="/biblioteca/m/:region" element={<Library />} />
+          <Route path="/biblioteca/m/:region/:group" element={<Library />} />
           <Route path="/biblioteca/novo" element={<CustomExerciseForm />} />
           <Route path="/biblioteca/editar/:id" element={<CustomExerciseForm />} />
           <Route path="/sessao/:id" element={<Session />} />

@@ -1,44 +1,24 @@
-import { useMemo, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../db.js';
-import { newItem, updateItems } from '../workouts.js';
+import { useEffect } from 'react';
+import { useLocation, useNavigate, useNavigationType, useParams } from 'react-router-dom';
+import { useWorkoutPicker, resetPickSession } from '../picker.js';
 import ExerciseBrowser from '../components/ExerciseBrowser.jsx';
 
+/** Adicionar exercícios a um treino: mesma biblioteca, mas tocar no nome adiciona. */
 export default function WorkoutPicker() {
-  const { id } = useParams();
+  const { id, region } = useParams();
   const nav = useNavigate();
-  const w = useLiveQuery(() => db.workouts.get(id), [id]);
-  const addedNow = useRef(new Set()); // uids adicionados nesta visita (podem ser desfeitos com um toque)
+  const loc = useLocation();
+  const navType = useNavigationType();
+  const { picked, onPick, count } = useWorkoutPicker(id);
 
-  const picked = useMemo(() => {
-    const m = new Map();
-    for (const it of w?.items ?? []) m.set(it.exerciseId, (m.get(it.exerciseId) ?? 0) + 1);
-    return m;
-  }, [w]);
+  // nova visita ao seletor (vindo do treino) → zera o "desfazer com um toque"
+  useEffect(() => { if (!region && navType === 'PUSH') resetPickSession(); }, []); // eslint-disable-line
 
-  async function onPick(e) {
-    const existing = (w?.items ?? []).filter(it => it.exerciseId === e.id);
-    if (!existing.length) {
-      const it = newItem(e.id);
-      addedNow.current.add(it.uid);
-      return updateItems(id, items => [...items, it]);
-    }
-    const undoable = existing.find(it => addedNow.current.has(it.uid));
-    if (undoable) return updateItems(id, items => items.filter(x => x.uid !== undoable.uid));
-    if (confirm(`“${e.name}” já está no treino. Remover?`)) {
-      return updateItems(id, items => items.filter(x => x.exerciseId !== e.id));
-    }
-  }
+  // volta direto ao treino, não importa quantos níveis da biblioteca foram abertos
+  const done = () => nav(-((loc.state?.d ?? 0) + 1));
 
-  const n = w?.items.length ?? 0;
   return (
-    <>
-      <header className="page-header">
-        <h1 style={{ fontSize: 22 }}>Adicionar</h1>
-        <button className="btn small primary" onClick={() => nav(-1)}>Concluir{n ? ` (${n})` : ''}</button>
-      </header>
-      <ExerciseBrowser stateKey="picker" mode="pick" onPick={onPick} picked={picked} />
-    </>
+    <ExerciseBrowser base={`/treino/${id}/adicionar`} title="Adicionar" mode="pick" onPick={onPick} picked={picked}
+      right={<button className="btn small primary" onClick={done}>Concluir{count ? ` (${count})` : ''}</button>} />
   );
 }

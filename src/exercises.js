@@ -50,3 +50,27 @@ export function useExerciseMap() {
 }
 
 export const normalize = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+/*
+ * Regiões da biblioteca (1º nível). Cada exercício entra na região do seu músculo principal
+ * (o primeiro listado), para não aparecer repetido.
+ */
+export const REGIONS = [
+  { key: 'peito', label: 'Peito', muscles: ['chest'] },
+  { key: 'costas', label: 'Costas', muscles: ['lats', 'middle back', 'lower back'] },
+  { key: 'ombros', label: 'Ombros', muscles: ['shoulders'] },
+  { key: 'trapezio', label: 'Trapézio e pescoço', muscles: ['traps', 'neck'] },
+  { key: 'biceps', label: 'Bíceps', muscles: ['biceps'] },
+  { key: 'triceps', label: 'Tríceps', muscles: ['triceps'] },
+  { key: 'antebraco', label: 'Antebraço', muscles: ['forearms'] },
+  { key: 'abdomen', label: 'Abdômen', muscles: ['abdominals'] },
+  { key: 'quadriceps', label: 'Quadríceps', muscles: ['quadriceps'] },
+  { key: 'posterior', label: 'Posterior de coxa', muscles: ['hamstrings'] },
+  { key: 'gluteos', label: 'Glúteos e quadril', muscles: ['glutes', 'adductors', 'abductors'] },
+  { key: 'panturrilha', label: 'Panturrilha', muscles: ['calves'] },
+  { key: 'outros', label: 'Outros', muscles: [] },
+];
+export const regionOf = e => REGIONS.find(r => r.muscles.includes(e.primary?.[0]))?.key ?? 'outros';
+export const regionLabel = k => REGIONS.find(r => r.key === k)?.label ?? k;
+/** Identificador de URL para o nome de um movimento (ex: "Supino inclinado" → "supino-inclinado"). */
+export const slug = s => normalize(s).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');

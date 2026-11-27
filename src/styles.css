@@ -300,3 +300,32 @@ button.ex-row { width: 100%; background: none; border: 0; font: inherit; text-al
 .swap-confirm { margin-top: 10px; padding: 12px; border-radius: 10px; background: var(--surface-2); }
 .swap-confirm p { margin: 0 0 10px; font-size: 14px; }
 .swap-confirm .btn-row { margin-bottom: 6px; }
+
+/* ---------- Biblioteca em níveis + grade ---------- */
+.big-list .thumb { width: 64px; height: 64px; }
+.big-list .ex-row { padding: 10px 12px; min-height: 84px; }
+.big-list .ex-name { font-size: 17px; }
+.big-list .chev { margin-left: auto; color: var(--muted); font-size: 24px; }
+.ex-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (min-width: 640px) { .ex-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.ex-grid > li { min-width: 0; }
+.ex-card { display: flex; flex-direction: column; height: 100%; background: var(--surface); border-radius: var(--radius);
+  overflow: hidden; color: inherit; text-decoration: none; box-shadow: 0 0 0 1px var(--border); }
+.ex-card.in { box-shadow: 0 0 0 2px var(--accent); }
+.ex-card-img { position: relative; display: block; aspect-ratio: 4 / 3; background: #fff; overflow: hidden; }
+.ex-card-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ex-card-empty { display: grid; place-items: center; width: 100%; height: 100%; background: var(--surface-2);
+  font-size: 44px; font-weight: 700; color: var(--muted); }
+.ex-card-info { position: absolute; top: 8px; right: 8px; width: 26px; height: 26px; border-radius: 50%;
+  background: rgba(0,0,0,.55); color: #fff; font: italic 700 15px/26px Georgia, serif; text-align: center; }
+.ex-card-foot { flex: 1; display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; column-gap: 8px; row-gap: 2px;
+  align-content: start; padding: 10px 10px 12px; text-align: left; background: none; border: 0; color: inherit; font: inherit; cursor: pointer; }
+.ex-card-name { grid-column: 1; font-size: 15px; font-weight: 600; line-height: 1.25; overflow-wrap: anywhere; }
+.ex-card-sub { grid-column: 1; font-size: 12px; color: var(--muted); }
+.ex-card-foot .pick-badge { grid-column: 2; grid-row: 1 / span 2; align-self: center; margin: 0; }
+.add-bar { position: fixed; left: 0; right: 0; z-index: 20; display: flex; align-items: center; gap: 12px;
+  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom)); padding: 10px calc(env(safe-area-inset-right) + 16px) 10px calc(env(safe-area-inset-left) + 16px);
+  background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(10px); border-top: 1px solid var(--border); }
+.add-bar-in { flex: 1; color: var(--accent); font-weight: 600; }
+.content:has(.add-bar) { padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 96px); }
+.page-header .header-title { font-size: 20px; line-height: 1.2; }

@@ -129,7 +129,7 @@ function ExerciseBlock({ s, ex, index, exMap, all, ss }) {
   const e = exMap.get(ex.exerciseId);
   const history = useLiveQuery(() => exerciseHistory(ex.exerciseId, { before: s.startedAt, excludeId: s.id }), [ex.exerciseId, s.startedAt, s.id]);
   const last = history === undefined ? undefined : history.at(-1) ?? null;
-  const tip = s.status === 'active' && history ? suggest(history, ex.planned) : null;
+  const tip = s.status === 'active' && history ? suggest(history, ex.planned, { bodyweight: e?.equipment === 'body only' }) : null;
   const [swapOpen, setSwapOpen] = useState(false);
   const p = ex.planned;
 

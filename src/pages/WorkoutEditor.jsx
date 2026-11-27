@@ -76,7 +76,7 @@ export default function WorkoutEditor() {
                   {e && <div className="ex-sub">{equipmentLabel(e.equipment)}</div>}
                 </div>
               </div>
-              <div className="item-fields">
+              <div className={e?.equipment === 'body only' ? 'item-fields bw' : 'item-fields'}>
                 <NumField label="Séries" value={it.sets} min={1} max={20} onCommit={v => setItem(it.uid, { sets: v })} />
                 <div className="num range">
                   <span className="num-label">Repetições</span>
@@ -86,7 +86,9 @@ export default function WorkoutEditor() {
                     <NumField value={it.repMax} min={1} max={100} onCommit={v => setItem(it.uid, { repMax: v })} />
                   </span>
                 </div>
-                <NumField label="Incremento" decimal suffix="kg" value={it.increment} min={0} max={50} onCommit={v => setItem(it.uid, { increment: v })} />
+                {e?.equipment !== 'body only' && (
+                  <NumField label="Incremento" decimal suffix="kg" value={it.increment} min={0} max={50} onCommit={v => setItem(it.uid, { increment: v })} />
+                )}
               </div>
               <div className="item-actions">
                 <button disabled={i === 0} onClick={() => updateItems(id, items => normalizeSupersets(moveInArray(items, i, -1)))} aria-label="Mover para cima">↑</button>

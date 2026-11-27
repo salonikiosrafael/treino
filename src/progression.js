@@ -53,12 +53,15 @@ const progressed = (prev, cur) => cur.maxKg > prev.maxKg || (cur.maxKg === prev.
  * @param planned  { repMin, repMax, increment } da sessão atual
  * @returns { kind: 'up'|'reduce'|'hold'|'stalled'|'reps', text } ou null sem histórico
  */
-export function suggest(history, planned) {
+export function suggest(history, planned, { bodyweight = false } = {}) {
   const last = history.at(-1);
   if (!last || !planned) return null;
   const { repMin, repMax } = planned;
   const inc = planned.increment > 0 ? planned.increment : 2.5;
   const kg = last.maxKg;
+
+  // Peso corporal sem carga extra: a progressão é por repetições, não por kg.
+  if (bodyweight && !kg) return suggestBodyweight(history, repMin, repMax);
 
   const allTop = last.sets.every(st => (st.reps ?? 0) >= repMax);
   const rirFail = last.sets.some(st => st.rir === 0 && (st.reps ?? 0) < repMax);
@@ -78,4 +81,25 @@ export function suggest(history, planned) {
   }
 
   return { kind: 'reps', text: `Mantenha ${fmtKg(kg)} kg e tente mais repetições` };
+}
+
+/** Mesmas regras, em repetições, para exercícios com o peso do corpo (ex: barra fixa, paralelas). */
+function suggestBodyweight(history, repMin, repMax) {
+  const last = history.at(-1);
+  const prev = history.at(-2);
+  if (last.sets.every(st => (st.reps ?? 0) >= repMax)) {
+    return { kind: 'up', text: 'Topo da faixa em todas as séries: suba a meta de repetições ou adicione carga (ex: cinto com anilha)' };
+  }
+  if (belowMin(last, repMin) && prev && belowMin(prev, repMin)) {
+    return { kind: 'reduce', text: 'Abaixo do mínimo de novo: considere uma versão mais fácil (ex: com auxílio) ou baixar a faixa de reps' };
+  }
+  if (belowMin(last, repMin)) return { kind: 'hold', text: `Mantenha e tente chegar a ${repMin} reps em todas as séries` };
+  if (history.length >= 4) {
+    const tail = history.slice(-4);
+    const reps = h => h.sets.reduce((a, st) => a + (st.reps ?? 0), 0);
+    if ([1, 2, 3].every(i => reps(tail[i]) <= reps(tail[i - 1]))) {
+      return { kind: 'stalled', text: 'Estagnado: considere trocar a variação ou a faixa de repetições' };
+    }
+  }
+  return { kind: 'reps', text: 'Tente fazer mais repetições que da última vez' };
 }

@@ -145,11 +145,6 @@ function WorkoutCard({ w, exMap, lastDone, isNext, pos, archived, first, lastInL
       <Link to={`/treino/${w.id}`} className="w-main">
         {isNext && <div className="latest-tag">Próximo</div>}
         <div className="w-name">{w.name || 'Sem nome'}</div>
-        {regions.length > 0 && <div className="region-chips">{regions.slice(0, 4).map(r => <span key={r} className="rchip">{r}</span>)}</div>}
-        <div className="w-foot">
-          {thumbs.length > 0 && <span className="w-thumbs">{thumbs.map((e, k) => <Thumb key={k} e={e} />)}</span>}
-          <span className="ex-sub">{w.items.length} {w.items.length === 1 ? 'exercício' : 'exercícios'} · {last ? `feito ${relativeDay(last)}` : 'não realizado'}</span>
-        </div>
       </Link>
       <div className="w-side">
         {archived
@@ -157,6 +152,14 @@ function WorkoutCard({ w, exMap, lastDone, isNext, pos, archived, first, lastInL
           : <button className="btn small primary" onClick={() => start(w)}>Iniciar</button>}
         <button className="icon-btn" aria-label={`Opções de ${w.name}`} onClick={() => setMenu(open ? null : w.id)}>⋯</button>
       </div>
+      {/* linha de baixo ocupa a largura toda do card: etiquetas lado a lado e um card mais baixo */}
+      <Link to={`/treino/${w.id}`} className="w-body" tabIndex={-1}>
+        {regions.length > 0 && <div className="region-chips">{regions.map(r => <span key={r} className="rchip">{r}</span>)}</div>}
+        <div className="w-foot">
+          {thumbs.length > 0 && <span className="w-thumbs">{thumbs.map((e, k) => <Thumb key={k} e={e} />)}</span>}
+          <span className="ex-sub">{w.items.length} {w.items.length === 1 ? 'exercício' : 'exercícios'} · {last ? `feito ${relativeDay(last)}` : 'não realizado'}</span>
+        </div>
+      </Link>
       {open && (
         <div className="w-actions">
           {archived

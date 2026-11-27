@@ -54,23 +54,34 @@ function ActivityList({ exMap }) {
   ));
 }
 
+export function DumbbellIcon({ size = 22 }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round">
+      <path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11" />
+    </svg>
+  );
+}
+
 export function ActivityRow({ a, exMap }) {
   return <li>{a.kind === 'cardio' ? <CardioRow c={a.item} /> : <SessionRow s={a.item} exMap={exMap} />}</li>;
 }
 
 function SessionRow({ s, exMap }) {
   const sets = s.exercises.reduce((n, e) => n + e.sets.filter(isFilled).length, 0);
-  const names = exMap ? s.exercises.map(e => exMap.get(e.exerciseId)?.name).filter(Boolean) : [];
+  const names = exMap ? s.exercises.filter(e => e.sets.some(isFilled)).map(e => exMap.get(e.exerciseId)?.name).filter(Boolean) : [];
   return (
     <Link className="ex-row h-row" to={`/sessao/${s.id}`}>
       <i className="kind-bar s" aria-hidden="true" />
+      <span className="strength-badge" aria-hidden="true"><DumbbellIcon /></span>
       <div className="ex-meta">
         <div className="h-top">
           <span className="ex-name">{s.workoutName}</span>
           <span className="muted small">{fmtWeekday(s.startedAt)} · {fmtTime(s.startedAt)}</span>
         </div>
-        <div className="ex-sub">
-          {fmtDuration(s.durationSec)} · {plural(s.exercises.length, 'exercício', 'exercícios')} · {plural(sets, 'série', 'séries')} · {fmtKg(sessionVolume(s))} kg
+        <div className="stat-chips">
+          <span>⏱ {fmtDuration(s.durationSec)}</span>
+          <span>{plural(sets, 'série', 'séries')}</span>
+          <span>{fmtKg(Math.round(sessionVolume(s)))} kg</span>
         </div>
         {names.length > 0 && <div className="ex-sub h-names">{names.join(', ')}</div>}
       </div>

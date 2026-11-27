@@ -6,6 +6,7 @@ import { isFilled, getActiveSession, startSession } from '../sessions.js';
 import { activitiesBetween, startOfWeek, startOfDay, addDays, dayKey, DAY } from '../activity.js';
 import { fmtDuration, relativeDay } from '../format.js';
 import Calendar from '../components/Calendar.jsx';
+import { nextInPlan } from '../workouts.js';
 
 const WEEKDAYS = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'];
 const regionOfMuscle = m => REGIONS.find(r => r.muscles.includes(m))?.key;
@@ -124,16 +125,6 @@ function LastCard({ lastActivity, last, lastCardio }) {
       <div className="muted small">{n == null ? 'nenhum ainda' : n === 0 ? what : `atrás · ${what}`}</div>
     </section>
   );
-}
-
-/** Próximo da sequência: o treino do plano que vem depois do último feito (volta ao início no fim). */
-function nextInPlan(sessions, workouts) {
-  const plan = workouts.filter(w => !w.archived);
-  if (!plan.length) return null;
-  const last = sessions.find(s => plan.some(w => w.id === s.workoutId));
-  if (!last) return plan[0];
-  const i = plan.findIndex(w => w.id === last.workoutId);
-  return plan[(i + 1) % plan.length];
 }
 
 function NextCard({ sessions, workouts }) {

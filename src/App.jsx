@@ -11,6 +11,7 @@ import WorkoutEditor from './pages/WorkoutEditor.jsx';
 import WorkoutPicker from './pages/WorkoutPicker.jsx';
 import ExerciseDetail from './pages/ExerciseDetail.jsx';
 import CardioForm from './pages/CardioForm.jsx';
+import SessionSummary from './pages/SessionSummary.jsx';
 import Progress, { CalendarPage } from './pages/Progress.jsx';
 import ScrollToTop from './components/ScrollToTop.jsx';
 import UpdatePrompt from './components/UpdatePrompt.jsx';
@@ -47,6 +48,7 @@ export default function App() {
           <Route path="/biblioteca/novo" element={<CustomExerciseForm />} />
           <Route path="/biblioteca/editar/:id" element={<CustomExerciseForm />} />
           <Route path="/sessao/:id" element={<Session />} />
+          <Route path="/sessao/:id/resumo" element={<SessionSummary />} />
           <Route path="/cardio/novo" element={<CardioForm />} />
           <Route path="/cardio/:id" element={<CardioForm />} />
           <Route path="/progresso" element={<Progress />} />

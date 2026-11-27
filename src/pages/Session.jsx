@@ -43,7 +43,7 @@ export default function Session() {
       if (confirm('Nenhuma série foi registrada. Descartar esta sessão?')) { await deleteSession(id); nav('/', { replace: true }); }
       return;
     }
-    nav('/', { replace: true });
+    nav(`/sessao/${id}/resumo`, { replace: true });
   }
 
   async function discard() {

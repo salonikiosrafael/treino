@@ -77,3 +77,14 @@ export const parseNum = s => {
   return Number.isFinite(n) ? n : null;
 };
 export const fmtNum = n => (n == null ? '' : String(n).replace('.', ','));
+
+/** Próximo da sequência: o treino do plano que vem depois do último feito (volta ao início no fim). */
+export function nextInPlan(sessions, workouts) {
+  const plan = workouts.filter(w => !w.archived);
+  if (!plan.length) return null;
+  const last = sessions.find(s => plan.some(w => w.id === s.workoutId));
+  if (!last) return plan[0];
+  const i = plan.findIndex(w => w.id === last.workoutId);
+  return plan[(i + 1) % plan.length];
+}
+

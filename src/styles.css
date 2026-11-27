@@ -450,3 +450,53 @@ button.ex-row { width: 100%; background: none; border: 0; font: inherit; text-al
 .set-menu { display: flex; gap: 8px; margin: 6px 0 4px 40px; }
 .set-menu button { flex: 1; border: 0; border-radius: 10px; padding: 9px 8px; background: var(--surface-2); color: var(--text); font: inherit; font-size: 14px; }
 .set-menu .danger { color: var(--danger); }
+
+/* ---------- Fase F: Treinos, histórico, detalhe, resumo ---------- */
+.next-hero { margin: 4px 0 12px; padding: 16px; border-radius: var(--radius); color: #fff; background: linear-gradient(135deg, #15803d, #22c55e); }
+.nh-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; opacity: .9; }
+.nh-name { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; margin-top: 2px; }
+.nh-sub { font-size: 14px; opacity: .9; margin-top: 2px; }
+.nh-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.nh-chips span { font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: rgb(255 255 255 / .2); }
+.nh-start { display: block; width: 100%; margin-top: 14px; background: #fff; color: #15803d; font-size: 17px; font-weight: 700; }
+.w-card { align-items: stretch; position: relative; }
+.w-pos { flex: none; width: 36px; display: grid; place-items: center; font-weight: 800; font-size: 15px; color: var(--muted);
+  border-right: 1px solid var(--border); }
+.w-card.latest .w-pos { color: var(--accent); }
+.w-side { align-self: center; }
+.w-card .region-chips { margin-top: 6px; }
+.w-foot { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.w-thumbs { display: flex; flex: none; }
+.w-thumbs .thumb { width: 28px; height: 28px; border-radius: 8px; border: 2px solid var(--surface); }
+.w-thumbs .thumb + .thumb { margin-left: -8px; }
+.w-thumbs .thumb span { font-size: 12px; }
+.strength-badge { width: 40px; height: 40px; flex: none; border-radius: 12px; display: grid; place-items: center;
+  color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.stat-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.stat-chips span { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); font-variant-numeric: tabular-nums; }
+.facts-card { display: flex; flex-direction: column; gap: 10px; }
+.fact { display: grid; grid-template-columns: 7.5em 1fr; align-items: center; gap: 10px; }
+.fact-l { color: var(--muted); font-size: 14px; }
+.chips-wrap { display: flex; flex-wrap: wrap; gap: 6px; }
+.fact-chip { font-size: 13px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--surface-2); justify-self: start; }
+.fact-chip.main { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
+.fact-chip.eq { background: color-mix(in srgb, var(--cardio) 14%, transparent); color: var(--cardio); }
+.tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 8px 0 12px; }
+.tile { background: var(--surface); border-radius: var(--radius); padding: 12px 10px; display: flex; flex-direction: column; gap: 2px; }
+.tile-n { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.tile-n small { font-size: 13px; font-weight: 600; color: var(--muted); }
+.tile-l { font-size: 12px; color: var(--muted); }
+.delta { font-size: 11px; font-weight: 600; margin-top: 4px; }
+.delta.up { color: var(--accent); }
+.delta.down { color: var(--danger); }
+.delta.same { color: var(--muted); }
+.summary-hero { text-align: center; padding: 26px 16px 22px; margin: 8px 0 12px; border-radius: var(--radius); color: #fff;
+  background: linear-gradient(135deg, #15803d, #22c55e); }
+.sum-emoji { font-size: 44px; line-height: 1; }
+.sum-title { font-size: 26px; font-weight: 800; margin-top: 8px; letter-spacing: -0.02em; }
+.sum-sub { font-size: 15px; opacity: .9; margin-top: 2px; }
+.records { box-shadow: inset 0 0 0 2px #eab308; }
+.records ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.records li { display: flex; flex-direction: column; }
+.records li span { color: var(--muted); font-size: 14px; }
+.center { text-align: center; }

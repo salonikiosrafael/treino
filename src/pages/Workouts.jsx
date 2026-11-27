@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db.js';
-import { useExerciseMap, muscleLabel } from '../exercises.js';
+import { useExerciseMap, regionOf, regionLabel } from '../exercises.js';
+import { Thumb } from '../components/ExerciseBrowser.jsx';
 import { createWorkout, duplicateWorkout, deleteWorkout, moveWorkout, setArchived } from '../workouts.js';
 import { getActiveSession, startSession, lastDoneByWorkout } from '../sessions.js';
 import { relativeDay, fmtClock } from '../format.js';
@@ -43,8 +44,11 @@ export default function Workouts() {
 
   if (!workouts || lastDone === undefined) return null;
 
-  let latestId = null;
-  for (const [wid, ts] of lastDone) if (!latestId || ts > lastDone.get(latestId)) latestId = wid;
+  // próximo da sequência do plano: o que vem depois do último treino do plano realizado
+  const planList = workouts.filter(w => !w.archived);
+  let lastPlanIdx = -1;
+  planList.forEach((w, i) => { if (lastDone.has(w.id) && (lastPlanIdx < 0 || lastDone.get(w.id) > lastDone.get(planList[lastPlanIdx].id))) lastPlanIdx = i; });
+  const next = planList.length ? planList[(lastPlanIdx + 1) % planList.length] : null;
 
   const plan = workouts.filter(w => !w.archived);
   const saved = workouts.filter(w => w.archived);
@@ -59,7 +63,7 @@ export default function Workouts() {
         <button className="btn small primary" onClick={create}>+ Novo</button>
       </header>
 
-      {active && <ActiveBanner s={active} />}
+      {active ? <ActiveBanner s={active} /> : next && <NextHero w={next} exMap={exMap} last={lastDone.get(next.id)} onStart={() => start(next)} />}
 
       <WeekStrip />
 
@@ -83,7 +87,7 @@ export default function Workouts() {
           {plan.length === 0 && <p className="muted small plan-empty">Nenhum treino no plano. Coloque um dos guardados abaixo (menu ⋯ → “Colocar no plano”) ou crie um novo.</p>}
           <ul className="w-list">
             {plan.map((w, i) => (
-              <WorkoutCard key={w.id} w={w} {...cardProps} isLatest={w.id === latestId} first={i === 0} lastInList={i === plan.length - 1} />
+              <WorkoutCard key={w.id} w={w} {...cardProps} pos={i + 1} isNext={!active && w.id === next?.id} first={i === 0} lastInList={i === plan.length - 1} />
             ))}
           </ul>
         </>
@@ -111,22 +115,41 @@ export default function Workouts() {
   );
 }
 
-function WorkoutCard({ w, exMap, lastDone, isLatest, archived, first, lastInList, menu, setMenu, start, nav }) {
-  const muscles = exMap
-    ? [...new Set(w.items.flatMap(it => exMap.get(it.exerciseId)?.primary ?? []))].slice(0, 3).map(muscleLabel).join(' · ')
-    : '';
+const regionsOf = (w, exMap) => (exMap
+  ? [...new Set(w.items.map(it => exMap.get(it.exerciseId)).filter(Boolean).map(regionOf))].map(regionLabel)
+  : []);
+
+/** Destaque do topo: o próximo treino da sequência do plano. */
+function NextHero({ w, exMap, last, onStart }) {
+  const regions = regionsOf(w, exMap);
+  return (
+    <section className="next-hero">
+      <div className="nh-label">Próximo treino do plano</div>
+      <div className="nh-name">{w.name || 'Sem nome'}</div>
+      <div className="nh-sub">{w.items.length} {w.items.length === 1 ? 'exercício' : 'exercícios'} · {last ? `feito ${relativeDay(last)}` : 'ainda não realizado'}</div>
+      {regions.length > 0 && <div className="nh-chips">{regions.slice(0, 4).map(r => <span key={r}>{r}</span>)}</div>}
+      <button className="btn nh-start" onClick={onStart}>Iniciar treino</button>
+    </section>
+  );
+}
+
+function WorkoutCard({ w, exMap, lastDone, isNext, pos, archived, first, lastInList, menu, setMenu, start, nav }) {
+  const regions = regionsOf(w, exMap);
+  const thumbs = exMap ? w.items.slice(0, 4).map(it => exMap.get(it.exerciseId)).filter(Boolean) : [];
   const last = lastDone.get(w.id);
   const open = menu === w.id;
   const act = fn => async () => { await fn(); setMenu(null); };
   return (
-    <li className={['w-card', isLatest && 'latest', archived && 'archived'].filter(Boolean).join(' ')}>
+    <li className={['w-card', isNext && 'latest', archived && 'archived'].filter(Boolean).join(' ')}>
+      {pos && <span className="w-pos">{pos}</span>}
       <Link to={`/treino/${w.id}`} className="w-main">
-        {isLatest && <div className="latest-tag">Último realizado</div>}
+        {isNext && <div className="latest-tag">Próximo</div>}
         <div className="w-name">{w.name || 'Sem nome'}</div>
-        <div className="ex-sub">
-          {w.items.length} {w.items.length === 1 ? 'exercício' : 'exercícios'}{muscles && ` · ${muscles}`}
+        {regions.length > 0 && <div className="region-chips">{regions.slice(0, 4).map(r => <span key={r} className="rchip">{r}</span>)}</div>}
+        <div className="w-foot">
+          {thumbs.length > 0 && <span className="w-thumbs">{thumbs.map((e, k) => <Thumb key={k} e={e} />)}</span>}
+          <span className="ex-sub">{w.items.length} {w.items.length === 1 ? 'exercício' : 'exercícios'} · {last ? `feito ${relativeDay(last)}` : 'não realizado'}</span>
         </div>
-        <div className="ex-sub">{last ? `Feito ${relativeDay(last)}` : 'Ainda não realizado'}</div>
       </Link>
       <div className="w-side">
         {archived

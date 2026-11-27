@@ -4,7 +4,7 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAllExercises, equipmentLabel, muscleLabel, imageUrl, variationSort } from '../exercises.js';
 import { Thumb } from '../components/ExerciseBrowser.jsx';
 import { exerciseHistory } from '../progression.js';
-import { fmtSets, relativeDay } from '../format.js';
+import { fmtSets, relativeDay, fmtKg } from '../format.js';
 import { useWorkoutPicker } from '../picker.js';
 
 const ProgressCharts = lazy(() => import('../components/ProgressCharts.jsx'));
@@ -35,12 +35,12 @@ export default function ExerciseDetail() {
       <h1 className="detail-title">{e.name}</h1>
       {e.nameEn && <p className="muted small detail-en">{e.nameEn}</p>}
 
-      <section className="card">
-        <dl className="facts">
-          <dt>Equipamento</dt><dd>{equipmentLabel(e.equipment)}</dd>
-          <dt>Músculos principais</dt><dd>{e.primary.map(muscleLabel).join(', ') || '—'}</dd>
-          {e.secondary.length > 0 && <><dt>Secundários</dt><dd>{e.secondary.map(muscleLabel).join(', ')}</dd></>}
-        </dl>
+      <section className="card facts-card">
+        <div className="fact"><span className="fact-l">Equipamento</span><span className="fact-chip eq">{equipmentLabel(e.equipment)}</span></div>
+        <div className="fact"><span className="fact-l">Principais</span>
+          <span className="chips-wrap">{e.primary.length ? e.primary.map(m => <span key={m} className="fact-chip main">{muscleLabel(m)}</span>) : '—'}</span></div>
+        {e.secondary.length > 0 && <div className="fact"><span className="fact-l">Secundários</span>
+          <span className="chips-wrap">{e.secondary.map(m => <span key={m} className="fact-chip">{muscleLabel(m)}</span>)}</span></div>}
       </section>
 
       <Progress history={history} />
@@ -122,9 +122,15 @@ function Progress({ history }) {
   if (!history) return null;
   if (!history.length) return <p className="muted small center progress-empty">Os gráficos de evolução aparecem depois da primeira sessão com este exercício.</p>;
   const last = history.at(-1);
+  const best = k => Math.max(...history.map(h => h[k]));
   return (
     <>
       <h2 className="section-title">Progresso <span className="muted small">· {history.length} {history.length === 1 ? 'sessão' : 'sessões'}</span></h2>
+      <div className="tiles">
+        <div className="tile"><div className="tile-n">{fmtKg(best('maxKg'))}<small> kg</small></div><div className="tile-l">Recorde de carga</div></div>
+        <div className="tile"><div className="tile-n">{fmtKg(Math.round(best('e1rm')))}<small> kg</small></div><div className="tile-l">1RM estimado</div></div>
+        <div className="tile"><div className="tile-n">{history.length}</div><div className="tile-l">{history.length === 1 ? 'sessão' : 'sessões'}</div></div>
+      </div>
       <p className="muted small progress-last">Última vez ({relativeDay(last.date)}): {fmtSets(last.sets)}</p>
       {history.length < 2
         ? <p className="muted small progress-empty">Com 2 sessões ou mais, os gráficos aparecem aqui.</p>

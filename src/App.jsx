@@ -1,4 +1,6 @@
 import { NavLink, Route, Routes, useLocation } from 'react-router-dom';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { getActiveSession } from './sessions.js';
 import Library from './pages/Library.jsx';
 import CustomExerciseForm from './pages/CustomExerciseForm.jsx';
 import Settings from './pages/Settings.jsx';
@@ -23,6 +25,10 @@ const TABS = [
 
 export default function App() {
   const { pathname } = useLocation();
+  // sessão em andamento pertence à aba Treinos; sessões finalizadas, ao Histórico
+  const active = useLiveQuery(() => getActiveSession(), []);
+  const inLive = !!active && pathname === `/sessao/${active.id}`;
+  const isOn = (t, isActive) => (inLive ? t.to === '/' : isActive || t.also?.some(p => pathname.startsWith(p)));
   return (
     <div className="app">
       <main className="content">
@@ -52,7 +58,7 @@ export default function App() {
       <nav className="tabbar">
         {TABS.map(t => (
           <NavLink key={t.to} to={t.to} end={t.to === '/'}
-            className={({ isActive }) => (isActive || t.also?.some(p => pathname.startsWith(p)) ? 'tab active' : 'tab')}>
+            className={({ isActive }) => (isOn(t, isActive) ? 'tab active' : 'tab')}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d={t.icon} /></svg>
             <span>{t.label}</span>
           </NavLink>

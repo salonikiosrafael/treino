@@ -5,7 +5,7 @@ import { db } from '../db.js';
 import { useAllExercises, equipmentLabel, variationSort } from '../exercises.js';
 import {
   updateSession, addSet, removeSet, setField, swapExercise, saveNote, finishSession, deleteSession,
-  isFilled, sessionVolume,
+  isFilled, sessionVolume, addDrop, removeDrop, setDropField, cleanSet,
 } from '../sessions.js';
 import { exerciseHistory, suggest } from '../progression.js';
 import { fmtClock, fmtSets, relativeDay, fmtKg, toLocalInput } from '../format.js';
@@ -25,7 +25,7 @@ export default function Session() {
   // Ao sair da edição de uma sessão finalizada, descarta linhas de série deixadas vazias.
   useEffect(() => () => {
     updateSession(id, x => (x.status === 'done'
-      ? { ...x, exercises: x.exercises.map(e => ({ ...e, sets: e.sets.filter(isFilled) })) }
+      ? { ...x, exercises: x.exercises.map(e => ({ ...e, sets: e.sets.filter(isFilled).map(cleanSet) })) }
       : x));
   }, [id]);
 
@@ -61,8 +61,8 @@ export default function Session() {
         {live && <button className="btn small primary" onClick={finish}>Finalizar</button>}
       </header>
 
-      <h1 className="session-title">{s.workoutName}</h1>
-      {live ? <LiveClock startedAt={s.startedAt} /> : <HistoryMeta s={s} />}
+      <SessionHero s={s} live={live} />
+      {!live && <HistoryMeta s={s} />}
 
       <ol className="sx-list">
         {s.exercises.map((ex, i) => (
@@ -78,9 +78,30 @@ export default function Session() {
   );
 }
 
+/** Cabeçalho colorido: nome, cronômetro (ou data) e progresso das séries. */
+function SessionHero({ s, live }) {
+  const total = s.exercises.reduce((n, e) => n + e.sets.length, 0);
+  const done = s.exercises.reduce((n, e) => n + e.sets.filter(isFilled).length, 0);
+  const pct = total ? Math.round((done / total) * 100) : 0;
+  return (
+    <section className={live ? 'session-hero' : 'session-hero past'}>
+      <div className="sh-top">
+        <h1 className="sh-title">{s.workoutName}</h1>
+        {live ? <LiveClock startedAt={s.startedAt} /> : <span className="sh-date">{new Date(s.startedAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span>}
+      </div>
+      <div className="sh-progress" aria-label={`${done} de ${total} séries`}><i style={{ width: `${pct}%` }} /></div>
+      <div className="sh-stats">
+        <span><strong>{done}</strong>/{total} séries</span>
+        <span><strong>{s.exercises.length}</strong> {s.exercises.length === 1 ? 'exercício' : 'exercícios'}</span>
+        <span><strong>{fmtKg(Math.round(sessionVolume(s)))}</strong> kg</span>
+      </div>
+    </section>
+  );
+}
+
 function LiveClock({ startedAt }) {
   const now = useNow(1000);
-  return <p className="muted session-sub">Em andamento · <strong className="clock">{fmtClock(Math.max(0, Math.floor((now - startedAt) / 1000)))}</strong></p>;
+  return <span className="sh-clock">{fmtClock(Math.max(0, Math.floor((now - startedAt) / 1000)))}</span>;
 }
 
 function HistoryMeta({ s }) {
@@ -111,16 +132,19 @@ function ExerciseBlock({ s, ex, index, exMap, all }) {
   const [swapOpen, setSwapOpen] = useState(false);
   const p = ex.planned;
 
+  const filledCount = ex.sets.filter(isFilled).length;
+  const complete = ex.sets.length > 0 && filledCount === ex.sets.length;
+
   return (
-    <li className="sx-card">
-      <div className="item-head">
-        <span className="item-pos">{index + 1}</span>
+    <li className={complete ? 'sx-card complete' : 'sx-card'}>
+      <div className="sx-head">
         <Thumb e={e} />
         <div className="ex-meta">
+          <div className="sx-pos">Exercício {index + 1}{complete && <span className="sx-done"> · ✓ feito</span>}</div>
           {e
-            ? <Link to={`/exercicio/${encodeURIComponent(e.id)}`} className="ex-name plain">{e.name}</Link>
+            ? <Link to={`/exercicio/${encodeURIComponent(e.id)}`} className="ex-name plain sx-name">{e.name}</Link>
             : <span className="ex-name">Exercício removido</span>}
-          {p && <div className="ex-sub">Meta: {p.sets} × {p.repMin === p.repMax ? p.repMin : `${p.repMin}–${p.repMax}`} reps</div>}
+          {p && <span className="meta-chip">{p.sets} × {p.repMin === p.repMax ? p.repMin : `${p.repMin}–${p.repMax}`} reps</span>}
         </div>
         <button className="btn small ghost swap-btn" onClick={() => setSwapOpen(o => !o)}>{swapOpen ? 'Fechar' : 'Trocar'}</button>
       </div>
@@ -129,7 +153,7 @@ function ExerciseBlock({ s, ex, index, exMap, all }) {
 
       <div className="ref">
         {last === undefined ? '…' : last
-          ? <><span className="ref-label">Última vez ({relativeDay(last.date)}):</span> {fmtSets(last.sets) || '—'}</>
+          ? <><span className="ref-label">Última vez · {relativeDay(last.date)}</span><span className="ref-sets">{fmtSets(last.sets) || '—'}</span></>
           : <span className="muted">Primeira vez neste exercício.</span>}
       </div>
       {tip && <div className={`tip tip-${tip.kind}`}>{tip.text}</div>}
@@ -138,21 +162,10 @@ function ExerciseBlock({ s, ex, index, exMap, all }) {
 
       <div className="sets">
         <div className="set-row set-head">
-          <span>Série</span><span>Carga (kg)</span><span>Reps</span><span>RIR</span><span />
+          <span>Série</span><span>kg</span><span>Reps</span><span>RIR</span><span />
         </div>
         {ex.sets.map((st, i) => (
-          <div className="set-row" key={i}>
-            <span className="set-n">{i + 1}</span>
-            <SetInput value={st.kg} decimal placeholder="kg"
-              onSave={v => setField(s.id, ex.uid, i, 'kg', v)} />
-            <SetInput value={st.reps} placeholder="reps"
-              onSave={v => setField(s.id, ex.uid, i, 'reps', v)} />
-            <SetInput value={st.rir} placeholder="–" max={10}
-              onSave={v => setField(s.id, ex.uid, i, 'rir', v)} />
-            <button className="set-del" aria-label={`Remover série ${i + 1}`} onClick={() => {
-              if (!isFilled(st) || confirm(`Remover a série ${i + 1}?`)) removeSet(s.id, ex.uid, i);
-            }}>×</button>
-          </div>
+          <SetRow key={i} s={s} ex={ex} st={st} i={i} prev={last?.sets?.[i]} />
         ))}
         <button className="add-set" onClick={() => addSet(s.id, ex.uid)}>+ Adicionar série</button>
       </div>
@@ -160,8 +173,45 @@ function ExerciseBlock({ s, ex, index, exMap, all }) {
   );
 }
 
+/** Uma série: carga/reps/RIR, com o valor da última vez em cinza dentro do campo, e drops opcionais. */
+function SetRow({ s, ex, st, i, prev }) {
+  const [menu, setMenu] = useState(false);
+  const done = st.kg != null && st.reps != null;
+  return (
+    <div className={done ? 'set-wrap done' : 'set-wrap'}>
+      <div className="set-row">
+        <span className="set-n">{done ? '✓' : i + 1}</span>
+        <SetInput value={st.kg} decimal placeholder={prev?.kg != null ? fmtKg(prev.kg) : 'kg'}
+          onSave={v => setField(s.id, ex.uid, i, 'kg', v)} />
+        <SetInput value={st.reps} placeholder={prev?.reps != null ? String(prev.reps) : 'reps'}
+          onSave={v => setField(s.id, ex.uid, i, 'reps', v)} />
+        <SetInput value={st.rir} placeholder={prev?.rir != null ? String(prev.rir) : '–'} max={10}
+          onSave={v => setField(s.id, ex.uid, i, 'rir', v)} />
+        <button className="set-more" aria-label={`Opções da série ${i + 1}`} aria-expanded={menu} onClick={() => setMenu(m => !m)}>⋯</button>
+      </div>
+      {(st.drops ?? []).map((d, j) => (
+        <div className="set-row drop-row" key={j}>
+          <span className="drop-label">↓ drop</span>
+          <SetInput value={d.kg} decimal placeholder="kg" onSave={v => setDropField(s.id, ex.uid, i, j, 'kg', v)} />
+          <SetInput value={d.reps} placeholder="reps" onSave={v => setDropField(s.id, ex.uid, i, j, 'reps', v)} />
+          <span />
+          <button className="set-del" aria-label="Remover drop" onClick={() => removeDrop(s.id, ex.uid, i, j)}>×</button>
+        </div>
+      ))}
+      {menu && (
+        <div className="set-menu">
+          <button onClick={() => { addDrop(s.id, ex.uid, i); setMenu(false); }}>↓ Adicionar dropset</button>
+          <button className="danger" onClick={() => {
+            if (!isFilled(st) || confirm(`Remover a série ${i + 1}?`)) { removeSet(s.id, ex.uid, i); setMenu(false); }
+          }}>Remover série</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /**
- * Campo de série: sempre começa vazio (a referência da última vez fica só no texto acima).
+ * Campo de série: sempre começa vazio — o valor da última vez aparece só como dica em cinza (placeholder).
  * Salva a cada digitação para não perder nada se o app for fechado.
  */
 function SetInput({ value, onSave, decimal = false, placeholder, max = 9999 }) {

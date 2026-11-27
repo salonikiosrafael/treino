@@ -32,7 +32,8 @@ db.version(2).stores({
 // session = {
 //   id, workoutId, workoutName (cópia do nome na hora), status: 'active' | 'done',
 //   startedAt, finishedAt, durationSec, exerciseIds: [...] (índice multiEntry p/ histórico por exercício),
-//   exercises: [{ uid, exerciseId, planned: { sets, repMin, repMax, increment }, note, sets: [{ kg, reps, rir }] }]
+//   exercises: [{ uid, exerciseId, planned: { sets, repMin, repMax, increment }, note, sets: [{ kg, reps, rir, drops? }] }]
+//   (drops = [{ kg, reps }] opcional, adicionado em 2026-11 sem mudar índices — sessões antigas não têm)
 // }
 // exerciseNote = { exerciseId, text, updatedAt }  — nota "fixa" que aparece nas próximas sessões
 db.version(3).stores({

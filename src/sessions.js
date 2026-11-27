@@ -50,6 +50,19 @@ export const removeSet = (sid, uid, i) => updateExercise(sid, uid, e => ({ ...e,
 export const setField = (sid, uid, i, field, value) =>
   updateExercise(sid, uid, e => ({ ...e, sets: e.sets.map((st, n) => (n === i ? { ...st, [field]: value } : st)) }));
 
+/*
+ * Dropset: uma série pode ter `drops: [{ kg, reps }]` — as reduções de carga feitas logo em seguida.
+ * Campo opcional dentro do documento da sessão (sem índice): sessões antigas simplesmente não têm.
+ * Os drops entram no volume, mas não na progressão (que olha só a carga/reps da série principal).
+ */
+const mapSet = (e, i, fn) => ({ ...e, sets: e.sets.map((st, n) => (n === i ? fn(st) : st)) });
+export const addDrop = (sid, uid, i) => updateExercise(sid, uid, e => mapSet(e, i, st => ({ ...st, drops: [...(st.drops ?? []), { kg: null, reps: null }] })));
+export const removeDrop = (sid, uid, i, j) => updateExercise(sid, uid, e => mapSet(e, i, st => ({ ...st, drops: (st.drops ?? []).filter((_, n) => n !== j) })));
+export const setDropField = (sid, uid, i, j, field, value) =>
+  updateExercise(sid, uid, e => mapSet(e, i, st => ({ ...st, drops: (st.drops ?? []).map((d, n) => (n === j ? { ...d, [field]: value } : d)) })));
+const dropFilled = d => d.kg != null || d.reps != null;
+export const cleanSet = st => (st.drops ? { ...st, drops: st.drops.filter(dropFilled) } : st);
+
 /** Troca o exercício só nesta sessão. Com clearSets, as séries voltam a ficar vazias (mesma quantidade). */
 export async function swapExercise(sid, uid, newExerciseId, { clearSets = false } = {}) {
   const note = await db.exerciseNotes.get(newExerciseId);
@@ -72,7 +85,7 @@ export const filledSets = e => e.sets.filter(isFilled);
 export async function finishSession(id) {
   const s = await db.sessions.get(id);
   if (!s) return false;
-  const exercises = s.exercises.map(e => ({ ...e, sets: filledSets(e) }));
+  const exercises = s.exercises.map(e => ({ ...e, sets: filledSets(e).map(cleanSet) }));
   if (!exercises.some(e => e.sets.length)) return false;
   const finishedAt = Date.now();
   await db.sessions.put(withIds({
@@ -104,5 +117,7 @@ export async function lastDoneByWorkout() {
   return m;
 }
 
-export const sessionVolume = s =>
-  s.exercises.reduce((v, e) => v + e.sets.reduce((a, st) => a + (st.kg ?? 0) * (st.reps ?? 0), 0), 0);
+/** Volume de uma série, incluindo os drops. */
+export const setVolume = st =>
+  (st.kg ?? 0) * (st.reps ?? 0) + (st.drops ?? []).reduce((a, d) => a + (d.kg ?? 0) * (d.reps ?? 0), 0);
+export const sessionVolume = s => s.exercises.reduce((v, e) => v + e.sets.reduce((a, st) => a + setVolume(st), 0), 0);

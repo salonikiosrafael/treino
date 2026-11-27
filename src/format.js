@@ -32,8 +32,9 @@ export function fmtClock(sec) {
 
 export const fmtKg = n => (n == null ? '–' : String(Math.round(n * 100) / 100).replace('.', ','));
 
-/** "60×10 · 60×9 · 57,5×8" */
-export const fmtSets = sets => sets.map(st => `${fmtKg(st.kg)}×${st.reps ?? '–'}${st.rir != null ? ` @${st.rir}` : ''}`).join(' · ');
+/** "60×10 · 60×9 · 57,5×8 ↓40×6" (↓ = dropset) */
+export const fmtSets = sets => sets.map(st => `${fmtKg(st.kg)}×${st.reps ?? '–'}${st.rir != null ? ` @${st.rir}` : ''}`
+  + (st.drops ?? []).filter(d => d.kg != null || d.reps != null).map(d => ` ↓${fmtKg(d.kg)}×${d.reps ?? '–'}`).join('')).join(' · ');
 
 /** Para <input type="datetime-local"> (hora local). */
 export function toLocalInput(ts) {

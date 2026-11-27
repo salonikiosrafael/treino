@@ -1,5 +1,5 @@
 import { db } from './db.js';
-import { isFilled } from './sessions.js';
+import { isFilled, setVolume } from './sessions.js';
 import { fmtKg } from './format.js';
 
 /*
@@ -24,7 +24,7 @@ export function summarizeExercise(session, exerciseId) {
   if (!sets.length) return null;
   const maxKg = Math.max(...sets.map(st => st.kg ?? 0));
   const repsAtMax = sets.filter(st => (st.kg ?? 0) === maxKg).reduce((a, st) => a + (st.reps ?? 0), 0);
-  const volume = sets.reduce((a, st) => a + (st.kg ?? 0) * (st.reps ?? 0), 0);
+  const volume = sets.reduce((a, st) => a + setVolume(st), 0);
   const e1rm = Math.max(...sets.map(st => epley(st.kg ?? 0, st.reps ?? 0)));
   return { date: session.startedAt, sessionId: session.id, sets, maxKg, repsAtMax, volume, e1rm };
 }

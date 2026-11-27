@@ -329,3 +329,15 @@ button.ex-row { width: 100%; background: none; border: 0; font: inherit; text-al
 .add-bar-in { flex: 1; color: var(--accent); font-weight: 600; }
 .content:has(.add-bar) { padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 96px); }
 .page-header .header-title { font-size: 20px; line-height: 1.2; }
+
+/* ---------- Meu plano / guardados ---------- */
+.plan-title { margin-top: 18px; }
+.plan-empty { margin: 0 0 12px; }
+.saved { margin-top: 8px; }
+.saved-head { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 14px 16px;
+  background: var(--surface); border: 0; border-radius: var(--radius); color: var(--text); font: inherit; font-size: 16px; cursor: pointer; }
+.saved-head .chev { display: inline-block; transition: transform .15s; }
+.saved-head .chev.open { transform: rotate(90deg); }
+.saved-hint { margin: 10px 4px; }
+.w-card.archived { opacity: .85; }
+.w-card.archived .w-name { color: var(--muted); }

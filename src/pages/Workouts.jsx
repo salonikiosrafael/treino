@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db.js';
 import { useExerciseMap, muscleLabel } from '../exercises.js';
-import { createWorkout, duplicateWorkout, deleteWorkout, moveWorkout } from '../workouts.js';
+import { createWorkout, duplicateWorkout, deleteWorkout, moveWorkout, setArchived } from '../workouts.js';
 import { getActiveSession, startSession, lastDoneByWorkout } from '../sessions.js';
 import { relativeDay, fmtClock } from '../format.js';
 import { daysSinceBackup, BACKUP_REMINDER_DAYS } from '../backup.js';
@@ -21,6 +21,7 @@ export default function Workouts() {
   }, []);
   const exMap = useExerciseMap();
   const [menu, setMenu] = useState(null);
+  const [showSaved, setShowSaved] = useState(false);
 
   async function create() {
     const id = await createWorkout();
@@ -44,6 +45,10 @@ export default function Workouts() {
 
   let latestId = null;
   for (const [wid, ts] of lastDone) if (!latestId || ts > lastDone.get(latestId)) latestId = wid;
+
+  const plan = workouts.filter(w => !w.archived);
+  const saved = workouts.filter(w => w.archived);
+  const cardProps = { exMap, lastDone, menu, setMenu, start, nav };
 
   const showBackupReminder = backupDays === null || (backupDays != null && backupDays > BACKUP_REMINDER_DAYS);
 
@@ -72,45 +77,81 @@ export default function Workouts() {
         </div>
       )}
 
-      <ul className="w-list">
-        {workouts.map((w, i) => {
-          const muscles = exMap
-            ? [...new Set(w.items.flatMap(it => exMap.get(it.exerciseId)?.primary ?? []))].slice(0, 3).map(muscleLabel).join(' · ')
-            : '';
-          const last = lastDone.get(w.id);
-          const isLatest = w.id === latestId;
-          return (
-            <li key={w.id} className={isLatest ? 'w-card latest' : 'w-card'}>
-              <Link to={`/treino/${w.id}`} className="w-main">
-                {isLatest && <div className="latest-tag">Último realizado</div>}
-                <div className="w-name">{w.name || 'Sem nome'}</div>
-                <div className="ex-sub">
-                  {w.items.length} {w.items.length === 1 ? 'exercício' : 'exercícios'}{muscles && ` · ${muscles}`}
-                </div>
-                <div className="ex-sub">{last ? `Feito ${relativeDay(last)}` : 'Ainda não realizado'}</div>
-              </Link>
-              <div className="w-side">
-                <button className="btn small primary" onClick={() => start(w)}>Iniciar</button>
-                <button className="icon-btn" aria-label={`Opções de ${w.name}`} onClick={() => setMenu(menu === w.id ? null : w.id)}>⋯</button>
-              </div>
-              {menu === w.id && (
-                <div className="w-actions">
-                  <button onClick={() => nav(`/treino/${w.id}`)}>Editar</button>
-                  <button disabled={i === 0} onClick={() => moveWorkout(w.id, -1)}>↑ Subir</button>
-                  <button disabled={i === workouts.length - 1} onClick={() => moveWorkout(w.id, 1)}>↓ Descer</button>
-                  <button onClick={async () => { await duplicateWorkout(w.id); setMenu(null); }}>Duplicar</button>
-                  <button className="danger" onClick={async () => {
-                    if (confirm(`Excluir o treino “${w.name}”? O histórico das sessões feitas com ele é mantido.`)) {
-                      await deleteWorkout(w.id); setMenu(null);
-                    }
-                  }}>Excluir</button>
-                </div>
-              )}
-            </li>
-          );
-        })}
-      </ul>
+      {workouts.length > 0 && (
+        <>
+          <h2 className="section-title plan-title">Meu plano <span className="muted small">· {plan.length} {plan.length === 1 ? 'treino' : 'treinos'}</span></h2>
+          {plan.length === 0 && <p className="muted small plan-empty">Nenhum treino no plano. Coloque um dos guardados abaixo (menu ⋯ → “Colocar no plano”) ou crie um novo.</p>}
+          <ul className="w-list">
+            {plan.map((w, i) => (
+              <WorkoutCard key={w.id} w={w} {...cardProps} isLatest={w.id === latestId} first={i === 0} lastInList={i === plan.length - 1} />
+            ))}
+          </ul>
+        </>
+      )}
+
+      {saved.length > 0 && (
+        <section className="saved">
+          <button className="saved-head" onClick={() => setShowSaved(v => !v)} aria-expanded={showSaved}>
+            <span><strong>Treinos guardados</strong> <span className="muted">· {saved.length}</span></span>
+            <span className="muted small">{showSaved ? 'Ocultar' : 'Mostrar'} <span className={showSaved ? 'chev open' : 'chev'}>›</span></span>
+          </button>
+          {showSaved && (
+            <>
+              <p className="muted small saved-hint">Fora do plano, mas com tudo salvo. Coloque de volta quando quiser.</p>
+              <ul className="w-list">
+                {saved.map((w, i) => (
+                  <WorkoutCard key={w.id} w={w} {...cardProps} archived first={i === 0} lastInList={i === saved.length - 1} />
+                ))}
+              </ul>
+            </>
+          )}
+        </section>
+      )}
     </>
+  );
+}
+
+function WorkoutCard({ w, exMap, lastDone, isLatest, archived, first, lastInList, menu, setMenu, start, nav }) {
+  const muscles = exMap
+    ? [...new Set(w.items.flatMap(it => exMap.get(it.exerciseId)?.primary ?? []))].slice(0, 3).map(muscleLabel).join(' · ')
+    : '';
+  const last = lastDone.get(w.id);
+  const open = menu === w.id;
+  const act = fn => async () => { await fn(); setMenu(null); };
+  return (
+    <li className={['w-card', isLatest && 'latest', archived && 'archived'].filter(Boolean).join(' ')}>
+      <Link to={`/treino/${w.id}`} className="w-main">
+        {isLatest && <div className="latest-tag">Último realizado</div>}
+        <div className="w-name">{w.name || 'Sem nome'}</div>
+        <div className="ex-sub">
+          {w.items.length} {w.items.length === 1 ? 'exercício' : 'exercícios'}{muscles && ` · ${muscles}`}
+        </div>
+        <div className="ex-sub">{last ? `Feito ${relativeDay(last)}` : 'Ainda não realizado'}</div>
+      </Link>
+      <div className="w-side">
+        {archived
+          ? <button className="btn small" onClick={() => setArchived(w.id, false)}>+ Plano</button>
+          : <button className="btn small primary" onClick={() => start(w)}>Iniciar</button>}
+        <button className="icon-btn" aria-label={`Opções de ${w.name}`} onClick={() => setMenu(open ? null : w.id)}>⋯</button>
+      </div>
+      {open && (
+        <div className="w-actions">
+          {archived
+            ? <button onClick={act(() => setArchived(w.id, false))}>Colocar no plano</button>
+            : <button onClick={act(() => setArchived(w.id, true))}>Tirar do plano</button>}
+          {archived && <button onClick={() => start(w)}>Iniciar avulso</button>}
+          <button onClick={() => nav(`/treino/${w.id}`)}>Editar</button>
+          <button disabled={first} onClick={() => moveWorkout(w.id, -1)}>↑ Subir</button>
+          <button disabled={lastInList} onClick={() => moveWorkout(w.id, 1)}>↓ Descer</button>
+          <button onClick={act(() => duplicateWorkout(w.id))}>Duplicar</button>
+          <button className="danger" onClick={async () => {
+            if (confirm(`Excluir o treino “${w.name}”? O histórico das sessões feitas com ele é mantido.`)) {
+              await deleteWorkout(w.id); setMenu(null);
+            }
+          }}>Excluir</button>
+        </div>
+      )}
+    </li>
   );
 }
 

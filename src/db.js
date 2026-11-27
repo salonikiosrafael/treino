@@ -47,6 +47,13 @@ db.version(4).stores({
   cardio: 'id, date, type',
 });
 
+// v5 — "Meu plano": treinos ganham o campo `archived` (false = no plano, true = guardado fora do plano).
+// Mesmas tabelas/índices; o upgrade só acrescenta archived: false em todos os treinos existentes,
+// então tudo o que o usuário já tinha continua no plano. Registros sem o campo (ex: backup antigo)
+// também são tratados como "no plano" (!w.archived), então importar um backup v4 continua funcionando.
+db.version(5).stores({}).upgrade(tx =>
+  tx.table('workouts').toCollection().modify(w => { if (w.archived === undefined) w.archived = false; }));
+
 export async function getSetting(key, fallback = null) {
   const row = await db.settings.get(key);
   return row ? row.value : fallback;

@@ -7,7 +7,7 @@ export const newItem = exerciseId => ({ uid: newId('i'), exerciseId, ...DEFAULTS
 export async function createWorkout(name = 'Novo treino') {
   const last = await db.workouts.orderBy('order').last();
   const now = Date.now();
-  const w = { id: newId('w'), name, order: (last?.order ?? 0) + 1, items: [], createdAt: now, updatedAt: now };
+  const w = { id: newId('w'), name, order: (last?.order ?? 0) + 1, items: [], archived: false, createdAt: now, updatedAt: now };
   await db.workouts.add(w);
   return w.id;
 }
@@ -29,7 +29,7 @@ export async function duplicateWorkout(id) {
   const w = await db.workouts.get(id);
   if (!w) return;
   const copyId = await createWorkout(`${w.name} (cópia)`);
-  await updateWorkout(copyId, { items: w.items.map(it => ({ ...it, uid: newId('i') })) });
+  await updateWorkout(copyId, { items: w.items.map(it => ({ ...it, uid: newId('i') })), archived: !!w.archived });
   return copyId;
 }
 
@@ -37,10 +37,18 @@ export function deleteWorkout(id) {
   return db.workouts.delete(id);
 }
 
-/** Troca a posição do treino com o vizinho (dir = -1 sobe, +1 desce). */
+/** Coloca no plano (archived=false) ou guarda fora dele (true); entra no fim da lista de destino. */
+export async function setArchived(id, archived) {
+  const last = await db.workouts.orderBy('order').last();
+  return db.workouts.update(id, { archived, order: (last?.order ?? 0) + 1, updatedAt: Date.now() });
+}
+
+/** Troca a posição do treino com o vizinho da mesma lista (plano ou guardados). dir = -1 sobe, +1 desce. */
 export function moveWorkout(id, dir) {
   return db.transaction('rw', db.workouts, async () => {
-    const list = await db.workouts.orderBy('order').toArray();
+    const all = await db.workouts.orderBy('order').toArray();
+    const me = all.find(w => w.id === id);
+    const list = all.filter(w => !!w.archived === !!me?.archived);
     const i = list.findIndex(w => w.id === id);
     const j = i + dir;
     if (i < 0 || j < 0 || j >= list.length) return;

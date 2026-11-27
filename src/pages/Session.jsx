@@ -9,7 +9,7 @@ import {
 } from '../sessions.js';
 import { exerciseHistory, suggest } from '../progression.js';
 import { fmtClock, fmtSets, relativeDay, fmtKg, toLocalInput } from '../format.js';
-import { parseNum, fmtNum } from '../workouts.js';
+import { parseNum, fmtNum, supersetInfo, supersetName } from '../workouts.js';
 import { useNow } from '../hooks.js';
 import { Thumb } from '../components/ExerciseBrowser.jsx';
 import NumField from '../components/NumField.jsx';
@@ -33,6 +33,7 @@ export default function Session() {
   if (!s) return <p className="empty">Sessão não encontrada. <Link to="/historico">Ver histórico</Link></p>;
 
   const live = s.status === 'active';
+  const ssInfo = supersetInfo(s.exercises);
 
   async function finish() {
     const pending = s.exercises.reduce((n, e) => n + e.sets.filter(st => !isFilled(st)).length, 0);
@@ -66,7 +67,7 @@ export default function Session() {
 
       <ol className="sx-list">
         {s.exercises.map((ex, i) => (
-          <ExerciseBlock key={ex.uid} s={s} ex={ex} index={i} exMap={exMap} all={all} />
+          <ExerciseBlock key={ex.uid} s={s} ex={ex} index={i} exMap={exMap} all={all} ss={ssInfo[i]} />
         ))}
       </ol>
 
@@ -124,7 +125,7 @@ function HistoryMeta({ s }) {
   );
 }
 
-function ExerciseBlock({ s, ex, index, exMap, all }) {
+function ExerciseBlock({ s, ex, index, exMap, all, ss }) {
   const e = exMap.get(ex.exerciseId);
   const history = useLiveQuery(() => exerciseHistory(ex.exerciseId, { before: s.startedAt, excludeId: s.id }), [ex.exerciseId, s.startedAt, s.id]);
   const last = history === undefined ? undefined : history.at(-1) ?? null;
@@ -136,11 +137,12 @@ function ExerciseBlock({ s, ex, index, exMap, all }) {
   const complete = ex.sets.length > 0 && filledCount === ex.sets.length;
 
   return (
-    <li className={complete ? 'sx-card complete' : 'sx-card'}>
+    <li className={['sx-card', complete && 'complete', ss && 'ss', ss?.first && 'ss-first', ss?.last && 'ss-last'].filter(Boolean).join(' ')}>
+      {ss?.first && <div className="ss-tag">{supersetName(ss.size)} {ss.letter} · faça uma série de cada, em sequência</div>}
       <div className="sx-head">
         <Thumb e={e} />
         <div className="ex-meta">
-          <div className="sx-pos">Exercício {index + 1}{complete && <span className="sx-done"> · ✓ feito</span>}</div>
+          <div className="sx-pos">{ss ? `${supersetName(ss.size)} ${ss.letter}${ss.pos}` : `Exercício ${index + 1}`}{complete && <span className="sx-done"> · ✓ feito</span>}</div>
           {e
             ? <Link to={`/exercicio/${encodeURIComponent(e.id)}`} className="ex-name plain sx-name">{e.name}</Link>
             : <span className="ex-name">Exercício removido</span>}

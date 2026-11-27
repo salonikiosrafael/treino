@@ -88,3 +88,62 @@ export function nextInPlan(sessions, workouts) {
   return plan[(i + 1) % plan.length];
 }
 
+
+/*
+ * Biset/superset: itens CONSECUTIVOS com o mesmo `superset` (id) formam um grupo.
+ * Campo opcional dentro do documento do treino (e copiado para a sessão) — sem índice, sem migração;
+ * treinos e sessões antigos simplesmente não têm.
+ */
+
+/** Remove ids de grupo que não ligam pelo menos 2 itens vizinhos. */
+export function normalizeSupersets(items) {
+  return items.map((it, i) => {
+    if (!it.superset) return it;
+    const linked = items[i - 1]?.superset === it.superset || items[i + 1]?.superset === it.superset;
+    if (linked) return it;
+    const { superset, ...rest } = it; // eslint-disable-line no-unused-vars
+    return rest;
+  });
+}
+
+/** Junta o item i com o próximo (i+1) no mesmo grupo. */
+export function linkWithNext(items, i) {
+  if (i < 0 || i >= items.length - 1) return items;
+  const sid = items[i].superset ?? items[i + 1].superset ?? newId('ss');
+  const old = items[i + 1].superset;
+  return normalizeSupersets(items.map((it, n) => {
+    if (n === i || n === i + 1) return { ...it, superset: sid };
+    if (old && old !== sid && it.superset === old) return { ...it, superset: sid }; // une dois grupos
+    return it;
+  }));
+}
+
+/** Separa o item i do próximo: os itens depois de i ganham um id novo. */
+export function unlinkFromNext(items, i) {
+  const sid = items[i]?.superset;
+  if (!sid || items[i + 1]?.superset !== sid) return items;
+  const fresh = newId('ss');
+  return normalizeSupersets(items.map((it, n) => (n > i && it.superset === sid ? { ...it, superset: fresh } : it)));
+}
+
+/**
+ * Para cada índice: null (exercício solo) ou { letter: 'A', pos: 1, size: 2, first, last }.
+ * Só agrupa itens vizinhos com o mesmo id.
+ */
+export function supersetInfo(items) {
+  const out = items.map(() => null);
+  let letter = 0;
+  for (let i = 0; i < items.length;) {
+    const sid = items[i].superset;
+    let j = i;
+    while (sid && j + 1 < items.length && items[j + 1].superset === sid) j++;
+    if (j > i) {
+      const L = String.fromCharCode(65 + (letter++ % 26));
+      for (let k = i; k <= j; k++) out[k] = { letter: L, pos: k - i + 1, size: j - i + 1, first: k === i, last: k === j };
+    }
+    i = j + 1;
+  }
+  return out;
+}
+
+export const supersetName = size => (size === 2 ? 'Biset' : size === 3 ? 'Triset' : 'Superset');

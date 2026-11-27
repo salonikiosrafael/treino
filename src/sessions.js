@@ -20,6 +20,7 @@ export async function startSession(workoutId) {
     exercises: w.items.map((it, i) => ({
       uid: newId('e'),
       exerciseId: it.exerciseId,
+      ...(it.superset ? { superset: it.superset } : {}),
       planned: { sets: it.sets, repMin: it.repMin, repMax: it.repMax, increment: it.increment },
       note: notes[i]?.text ?? '',
       sets: Array.from({ length: it.sets }, emptySet), // campos começam VAZIOS

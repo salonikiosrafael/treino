@@ -3,7 +3,11 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db.js';
 import { useExerciseMap, equipmentLabel } from '../exercises.js';
-import { updateWorkout, updateItems, moveInArray, duplicateWorkout, deleteWorkout } from '../workouts.js';
+import {
+  updateWorkout, updateItems, moveInArray, duplicateWorkout, deleteWorkout,
+  normalizeSupersets, linkWithNext, unlinkFromNext, supersetInfo, supersetName,
+} from '../workouts.js';
+import { Fragment } from 'react';
 import { Thumb } from '../components/ExerciseBrowser.jsx';
 import NumField from '../components/NumField.jsx';
 
@@ -23,6 +27,7 @@ export default function WorkoutEditor() {
   if (!w) return <p className="empty">Treino não encontrado. <Link to="/">Voltar</Link></p>;
   if (name === null) return null;
 
+  const ssInfo = supersetInfo(w.items);
   const setItem = (uid, changes) => updateItems(id, items => items.map(it => {
     if (it.uid !== uid) return it;
     const next = { ...it, ...changes };
@@ -55,10 +60,14 @@ export default function WorkoutEditor() {
       <ol className="items">
         {w.items.map((it, i) => {
           const e = exMap?.get(it.exerciseId);
+          const ss = ssInfo[i];
+          const linkedNext = ss && !ss.last;
           return (
-            <li key={it.uid} className="item-card">
+            <Fragment key={it.uid}>
+            <li className={['item-card', ss && 'ss', ss?.first && 'ss-first', ss?.last && 'ss-last'].filter(Boolean).join(' ')}>
+              {ss?.first && <div className="ss-tag">{supersetName(ss.size)} {ss.letter} · sem descanso entre os exercícios</div>}
               <div className="item-head">
-                <span className="item-pos">{i + 1}</span>
+                <span className="item-pos">{ss ? `${ss.letter}${ss.pos}` : i + 1}</span>
                 <Thumb e={e} />
                 <div className="ex-meta">
                   {e
@@ -80,12 +89,20 @@ export default function WorkoutEditor() {
                 <NumField label="Incremento" decimal suffix="kg" value={it.increment} min={0} max={50} onCommit={v => setItem(it.uid, { increment: v })} />
               </div>
               <div className="item-actions">
-                <button disabled={i === 0} onClick={() => updateItems(id, items => moveInArray(items, i, -1))} aria-label="Mover para cima">↑</button>
-                <button disabled={i === w.items.length - 1} onClick={() => updateItems(id, items => moveInArray(items, i, 1))} aria-label="Mover para baixo">↓</button>
+                <button disabled={i === 0} onClick={() => updateItems(id, items => normalizeSupersets(moveInArray(items, i, -1)))} aria-label="Mover para cima">↑</button>
+                <button disabled={i === w.items.length - 1} onClick={() => updateItems(id, items => normalizeSupersets(moveInArray(items, i, 1)))} aria-label="Mover para baixo">↓</button>
                 <span style={{ flex: 1 }} />
-                <button className="danger" onClick={() => updateItems(id, items => items.filter(x => x.uid !== it.uid))}>Remover</button>
+                <button className="danger" onClick={() => updateItems(id, items => normalizeSupersets(items.filter(x => x.uid !== it.uid)))}>Remover</button>
               </div>
             </li>
+            {i < w.items.length - 1 && (
+              <li className={linkedNext ? 'link-row on' : 'link-row'}>
+                {linkedNext
+                  ? <button onClick={() => updateItems(id, items => unlinkFromNext(items, i))}>🔗 Juntos · separar</button>
+                  : <button onClick={() => updateItems(id, items => linkWithNext(items, i))}>+ Juntar com o próximo (biset)</button>}
+              </li>
+            )}
+            </Fragment>
           );
         })}
       </ol>

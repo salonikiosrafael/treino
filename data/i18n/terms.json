@@ -1,0 +1,31 @@
+{
+  "muscles": {
+    "abdominals": "Abdômen",
+    "abductors": "Abdutores",
+    "adductors": "Adutores",
+    "biceps": "Bíceps",
+    "calves": "Panturrilhas",
+    "chest": "Peitoral",
+    "forearms": "Antebraços",
+    "glutes": "Glúteos",
+    "hamstrings": "Posteriores de coxa",
+    "lats": "Dorsais",
+    "lower back": "Lombar",
+    "middle back": "Costas (meio)",
+    "neck": "Pescoço",
+    "quadriceps": "Quadríceps",
+    "shoulders": "Ombros",
+    "traps": "Trapézio",
+    "triceps": "Tríceps"
+  },
+  "equipment": {
+    "barbell": "Barra",
+    "dumbbell": "Halteres",
+    "cable": "Cabo / polia",
+    "machine": "Máquina",
+    "body only": "Peso corporal",
+    "e-z curl bar": "Barra W",
+    "kettlebells": "Kettlebell",
+    "bands": "Elástico"
+  }
+}
